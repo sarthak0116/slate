@@ -63,6 +63,17 @@ job/draft/roadmap results are cleared when switching versions, and stale delayed
 job/draft responses are discarded. This is not full draft/history/account-data
 management or pagination; retention/delete/export policy remains future work.
 
+### AI preview literal warning text
+
+AI/source-linked warnings and API errors are displayed as literal text, not
+interpreted HTML. The same escaping applies to draft identifiers and login
+messages; job choices use native text options. The existing draft Markdown
+renderer still escapes source text before adding its own limited tags.
+`python scripts/check_ai_literal_ui.py` checks inert markup in warnings/flags,
+approval errors, generation errors and parse errors, without provider calls.
+This closes these rendering paths, not every possible XSS or browser risk.
+
+
 ### Browser session-state checks
 
 Classic and AI pages clear private source/draft/approval display when sign-in
