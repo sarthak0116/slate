@@ -54,7 +54,10 @@ def name_candidate(lines):
     """
     titles = {"resume", "résumé", "curriculum vitae", "cv", "bio-data", "biodata"}
     sections = {"skills", "key skills", "technical skills", "education", "experience",
-                "work experience", "summary", "profile", "career objective", "objective"}
+                "work experience", "summary", "profile", "career objective", "objective",
+                "compétences", "habilidades", "fähigkeiten", "कौशल", "技能",
+                "qualifications", "academic background", "formation", "educación", "ausbildung", "शिक्षा", "教育",
+                "employment", "employment history", "professional experience", "expérience", "experiencia", "berufserfahrung", "अनुभव", "工作经历"}
     for line in lines[:8]:
         label = line.casefold().rstrip(':：')
         if label in titles:
