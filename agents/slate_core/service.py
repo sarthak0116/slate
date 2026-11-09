@@ -126,6 +126,46 @@ class SlateService:
         skills = self._resume(resume_id)["skills"] if resume_id else []
         return {"jobs": J.search_jobs(query, location, skills)}
 
+    def list_drafts(self):
+        items = list(reversed(list(self.approvals._drafts.items())))
+        return {"totalCount": len(items), "drafts": [
+            {"draftId": did, "resumeId": d["resumeId"], "jobId": d["jobId"],
+             "status": d["status"], "aiGenerated": bool(d["content"].get("aiGenerated"))}
+            for did, d in items[:100]]}
+
+    def get_draft(self, draft_id):
+        import copy
+        d = self.approvals.get(draft_id)
+        if d is None:
+            raise SlateError("draft_not_found", "No draft with that id.")
+        return {"draftId": draft_id, "resumeId": d["resumeId"], "jobId": d["jobId"],
+                "status": d["status"], "content": copy.deepcopy(d["content"]),
+                "source": self.get_resume(d["resumeId"]),
+                "violations": self._violations(d["resumeId"], d["content"])}
+
+    def download_draft(self, draft_id):
+        # The export gate rechecks exactly the stored approved version, including
+        # AI grounding through the subclass. Never render live editor values.
+        content = self.export_draft(draft_id)
+        d = self.approvals.get(draft_id)
+        parsed = self._resume(d["resumeId"])
+        import hashlib
+        original = self.get_resume(d["resumeId"])["sourceText"]
+        source_hash = hashlib.sha256(original.encode("utf-8")).hexdigest()
+        lines = ["Slate application draft (not a full original CV)",
+                 "Draft: " + draft_id, "Source version: " + d["resumeId"],
+                 "Original source SHA-256: " + source_hash,
+                 "Job: " + d["jobId"] + " (sample fixture, not live-verified)",
+                 "Status: approved saved version", "",
+                 "Human approval is not a fact check. Review before use.",
+                 "Source skill provenance (not independent verification):"]
+        for e in parsed.get("skillEvidence", []):
+            lines.append(e["skill"] + ": " + e.get("source", "not_recorded") +
+                         " / " + e.get("reviewStatus", "not_user_reviewed"))
+        lines += ["", "RESUME DRAFT", content.get("tailoredResume", ""),
+                  "", "COVER NOTE", content.get("coverNote", "")]
+        return "\n".join(lines) + "\n"
+
     def _tailor(self, resume_id, job_id) -> dict:
         parsed = self._resume(resume_id)
         job = J.get_job(job_id)
