@@ -43,6 +43,17 @@ with tempfile.TemporaryDirectory() as d:
    page.locator('#saveddrafts').select_option(current);page.locator('#opendraft').click();page.wait_for_function('did!==null')
    assert page.locator('#status').inner_text()=='draft'
    assert page.locator('#dnote').input_value()==exact_note+' Edited version.'
+   # A download started before further typing must not hand off a version
+   # different from the words now visible in the editor.
+   page.locator('#approve').click();page.wait_for_function('document.querySelector("#status").textContent==="approved"')
+   pending_download=[];downloads=[];page.on('download',lambda d:downloads.append(d))
+   page.route('**/v1/drafts/'+current+'/download',lambda route:pending_download.append(route))
+   page.locator('#export').click();page.wait_for_timeout(50);assert pending_download
+   page.locator('#dnote').fill(exact_note+' New unsaved words.')
+   response=pending_download[0].fetch();pending_download[0].fulfill(response=response)
+   page.wait_for_function('document.querySelector("#dmsg").textContent.includes("Unsaved changes")')
+   assert not downloads
+   page.unroute('**/v1/drafts/'+current+'/download')
    # Late opened draft from the prior account must not populate another login.
    held=[];page.route('**/v1/drafts/'+old,lambda route:held.append(route))
    page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click();page.wait_for_timeout(50)
