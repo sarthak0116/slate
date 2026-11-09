@@ -87,6 +87,122 @@ section,.panel{padding:18px 16px}
 .draftgrid{grid-template-columns:1fr}
 #resume{min-height:200px}
 }
+/* Quiet motion and tinted materials. No looped background animation. */
+:root{--soft:#eaf0f8;--card:rgba(250,252,255,.77);--line:rgba(123,145,185,.22);--blue:#3564de;--blue-soft:#e3eafb;--ease:cubic-bezier(.22,1,.36,1)}
+html{background:#eaf0f8}
+body{background:radial-gradient(ellipse at 4% 6%,rgba(137,164,228,.22),transparent 48%),radial-gradient(ellipse at 94% 35%,rgba(178,163,217,.22),transparent 48%),linear-gradient(145deg,#e8edf7 0%,#eff1f9 45%,#e7edf5 100%);min-height:100vh}
+.topbar{background:rgba(238,243,253,.82);border-bottom-color:rgba(135,155,190,.2);box-shadow:0 1px 18px rgba(38,59,98,.035)}
+section,.panel{background:linear-gradient(145deg,rgba(255,255,255,.8),rgba(242,246,253,.72));border-color:rgba(255,255,255,.85);box-shadow:0 3px 8px rgba(33,52,92,.025),0 18px 46px -24px rgba(39,65,116,.2);border-radius:20px}
+textarea,input[type=text],input[type=email],input:not([type]),select{background:rgba(247,250,255,.82);border-color:rgba(131,153,189,.24)}
+button,.partnext a{box-shadow:0 3px 8px rgba(32,51,91,.08);transition:background .18s ease,box-shadow .24s ease,transform .24s var(--ease),border-color .18s ease}
+button:active:not(:disabled),.partnext a:active{transform:scale(.975);box-shadow:0 1px 3px rgba(32,51,91,.08)}
+button.sec,button.secondary{background:rgba(248,251,255,.8)}
+.nlink{transition:background .22s ease,color .22s ease,box-shadow .22s ease}
+.nlink.active{background:rgba(255,255,255,.82);box-shadow:0 2px 9px rgba(44,75,145,.11);color:#2454cf}
+.nlink:focus-visible,button:focus-visible,.partnext a:focus-visible{outline:3px solid rgba(53,100,222,.5);outline-offset:3px}
+.pagehead h1{letter-spacing:-.045em}
+@keyframes material-arrive{from{opacity:.25;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:no-preference){.content{animation:material-arrive .55s var(--ease) both}}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){button:hover:not(:disabled),.partnext a:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(32,51,91,.13)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+
+/* The selection is one moving material, not seven independent highlights. */
+.nav{position:relative;isolation:isolate}
+.nlink{position:relative;z-index:1;min-height:40px;display:inline-flex;align-items:center}
+.nav-indicator{position:absolute;z-index:0;left:0;top:0;pointer-events:none;background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.95);border-radius:10px;box-shadow:0 2px 9px rgba(44,75,145,.11);transition:transform .46s var(--ease),width .46s var(--ease),height .46s var(--ease)}
+.nav.motion-ready .nlink.active{background:transparent;box-shadow:none}
+.eyebrow{text-transform:none;letter-spacing:.025em;font-weight:600}
+.uplbox{background:rgba(227,235,250,.7);border-color:#aabbd7;max-width:100%;flex-wrap:wrap}.uplbox input[type=file]{max-width:100%;min-width:0}
+@media(max-width:720px){.nlink{min-height:44px;padding:7px 8px}}
+@media(prefers-reduced-motion:reduce){.nav-indicator{transition:none}}
+
+/* ===== Slate canvas layer: quiet left rail, tinted ground, open AI canvas, deliberate composer ===== */
+:root{--railw:204px;--violet:#8a63e8;--rose:#e0729e}
+body{background:radial-gradient(1100px 740px at -10% -12%,rgba(120,150,230,.32),transparent 62%),radial-gradient(920px 660px at 110% 8%,rgba(188,164,224,.28),transparent 58%),radial-gradient(860px 900px at 80% 114%,rgba(124,166,228,.22),transparent 60%),linear-gradient(160deg,#e7edf7 0%,#eef0f9 45%,#e6ecf6 100%)}
+@media(min-width:861px){
+body{padding-left:var(--railw)}
+.topbar{position:fixed;left:0;top:0;bottom:0;width:var(--railw);height:auto;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:26px;padding:26px 14px;background:linear-gradient(180deg,rgba(244,247,253,.6),rgba(237,242,250,.34));border-bottom:0;border-right:1px solid rgba(123,145,185,.18);box-shadow:none}
+.brand{padding:0 13px;font-size:22px}
+.nav{flex-direction:column;align-items:stretch;gap:3px;overflow:visible}
+.nlink{width:100%;padding:9px 13px}
+.content{max-width:1040px;padding:52px 48px 104px}
+}
+@media(max-width:860px){
+.topbar{gap:6px 16px;padding:10px 16px;height:auto;flex-wrap:wrap}
+.nav{flex:1 1 100%;flex-wrap:wrap;overflow:visible;gap:2px}
+.nlink{font-size:12.5px;padding:6px 9px}
+.content{padding:28px 16px 68px}
+.pagehead h1{font-size:27px}
+}
+@keyframes slate-rise{from{opacity:0;transform:translateY(14px) scale(.996)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:no-preference){
+.content{animation:none}
+.pagehead,.content section:not(.off):not(.hidden),.content .panel:not(.hidden),.content .fold{animation:slate-rise .6s var(--ease) both}
+.content>*:nth-child(2){animation-delay:.05s}
+.content>*:nth-child(3){animation-delay:.1s}
+.content>*:nth-child(4){animation-delay:.16s}
+.content>*:nth-child(5){animation-delay:.22s}
+.composer section:nth-child(2){animation-delay:.08s}
+.content>#session,.content>#results{animation-delay:0s}
+}
+section,.panel{transition:opacity .45s var(--ease),transform .45s var(--ease),box-shadow .3s ease}
+section.off{transform:scale(.992)}
+.pagehead h1{font-size:clamp(29px,3.4vw,38px);letter-spacing:-.05em}
+h1 .grad{background:linear-gradient(118deg,#3564de 5%,#8a63e8 52%,#e0729e 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+button{background:linear-gradient(165deg,#3a6af0,#2b50cd);box-shadow:0 4px 14px rgba(43,90,220,.24),inset 0 1px 0 rgba(255,255,255,.14);border-radius:12px}
+button:hover{background:linear-gradient(165deg,#4172f5,#2f55d6)}
+button.sec,button.secondary{background:rgba(250,252,255,.85);color:var(--navy);border:1px solid rgba(123,145,185,.32);box-shadow:0 2px 6px rgba(32,51,91,.07)}
+button.sec:hover,button.secondary:hover{border-color:var(--navy);background:#fff}
+#gen::before{content:"\2726";margin-right:7px;font-size:12.5px}
+.tag{transition:background .3s ease,color .3s ease,border-color .3s ease}
+textarea{border-radius:16px;background:rgba(255,255,255,.9);box-shadow:inset 0 1px 3px rgba(30,50,90,.05)}
+textarea:focus,input[type=text]:focus,input[type=email]:focus,input:not([type]):focus,select:focus{border-color:rgba(53,100,222,.55);box-shadow:0 0 0 4px rgba(53,100,222,.12),0 0 22px -6px rgba(138,99,232,.35)}
+.composer{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:18px;margin:0 0 18px;align-items:start}
+.composer>section{margin:0}
+@media(max-width:860px){.composer{grid-template-columns:1fr}}
+#loginbox{background:rgba(247,250,255,.5);box-shadow:none}
+section.canvas{border-radius:24px;padding:26px 28px;background:linear-gradient(165deg,rgba(255,255,255,.95),rgba(245,248,255,.88));box-shadow:0 2px 6px rgba(33,52,92,.045),0 26px 64px -30px rgba(46,74,140,.38)}
+section.canvas::before,.question::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;background:linear-gradient(135deg,rgba(53,100,222,.55),rgba(138,99,232,.45) 40%,rgba(224,114,158,.4) 68%,rgba(53,100,222,.45));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none}
+section.canvas{position:relative}
+section.canvas h2::before{content:"\2726";background:linear-gradient(135deg,#3564de,#8a63e8 55%,#e0729e);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:16px}
+section.canvas pre{background:rgba(255,255,255,.96);border:1px solid rgba(123,145,185,.26);border-radius:14px;padding:15px 18px;font:14px/1.65 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 1px 3px rgba(30,50,90,.05)}
+@media(max-width:860px){section.canvas{padding:20px 16px}}
+details.fold{background:rgba(247,250,255,.55);border:1px solid rgba(123,145,185,.22);border-radius:16px;margin:0 0 18px;overflow:hidden}
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:flex-start;gap:11px;padding:13px 17px;font-size:13.5px;font-weight:600;color:var(--navy);-webkit-user-select:none;user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"";flex:none;width:7px;height:7px;margin-top:5px;border-right:2px solid #7c8aa5;border-bottom:2px solid #7c8aa5;transform:rotate(-45deg);transition:transform .32s var(--ease)}
+details.fold[open]>summary::before{transform:rotate(45deg)}
+details.fold .foldbody{padding:0 18px 16px 35px;font-size:13.5px;color:var(--ink)}
+.sumsub{color:var(--mut);font-weight:500}
+.question{position:relative;background:rgba(255,255,255,.93);border-color:transparent;border-radius:20px;padding:24px 26px;font-size:20px;box-shadow:0 2px 6px rgba(33,52,92,.05),0 20px 48px -24px rgba(46,74,140,.32)}
+@media(max-width:860px){.question{font-size:18px;padding:18px 20px}}
+.pill{background:rgba(255,255,255,.85);border:1px solid rgba(123,145,185,.3);box-shadow:0 1px 3px rgba(30,50,90,.06)}
+#coachMode{background:linear-gradient(135deg,rgba(53,100,222,.13),rgba(138,99,232,.14));border:1px solid rgba(110,95,220,.34);color:#463f9e}
+#coachMode::before{content:"\2726";margin-right:6px;font-size:11px;background:linear-gradient(135deg,#3564de,#8a63e8);-webkit-background-clip:text;background-clip:text;color:transparent}
+#liveReview:not(:empty){background:rgba(255,255,255,.88);border:1px solid rgba(123,145,185,.26);border-radius:14px;padding:12px 16px;margin:4px 0 2px}
+#answer{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14.5px;min-height:150px}
+.camfold{margin-top:14px}
+.review{border:1px solid rgba(123,145,185,.22);border-radius:14px;padding:16px 18px;margin:0 0 12px;background:rgba(255,255,255,.8)}
+.review:last-child{margin-bottom:0}
+blockquote{background:rgba(240,244,252,.8);border-left:3px solid #3564de;border-radius:0 12px 12px 0}
+
+
+#loginbox:has(#out),#authPanel:has(#signout){padding:0;background:none;border:0;box-shadow:none;margin:0 0 22px}
+#loginbox:has(#out)>h2,#authPanel:has(#signout)>b{display:none}
+#loginbox:has(#out) #loginmsg,#authPanel:has(#signout) #authControls{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--mut);margin:0}
+#loginbox:has(#out) .ok{color:var(--mut)}
+#loginbox:has(#out) button,#authPanel:has(#signout) button{font-size:12px;margin:0;padding:8px 12px}
+.pagehead h1{background:none;color:var(--navy);-webkit-text-fill-color:var(--navy)}
+@media(min-width:901px){.topbar{width:204px}.content{margin-left:204px;margin-right:0;padding-left:34px;padding-right:34px}}
+
+#s3.off{display:none}#s3.canvas{margin-bottom:28px;border:0;box-shadow:none;background:transparent;padding:0}#s3.canvas::before{display:none}
+#s3 pre{background:rgba(255,255,255,.9);border-color:rgba(255,255,255,.9);border-radius:10px;padding:24px;font:14px/1.8 "Inter",system-ui,sans-serif;min-height:150px}
+#s3 h2{font-size:16px}#s3 h2 b{display:none}#s3 h2::before{display:none}.content:has(#s3:not(.off)) .composer{opacity:.95;margin-top:26px}
+.composer #resume{background:transparent;border:0;box-shadow:none;font:14px/1.7 "Inter",system-ui,sans-serif}.composer section{border-radius:22px}.composer h2{font-size:15px}.composer #parse,.composer #gen{border-radius:999px}.composer #job{max-width:100%}
+
+.composer,.composer>section{min-width:0;max-width:100%}.composer select{width:100%;min-width:0}.msg,pre{overflow-wrap:anywhere}
+@media(max-width:720px){.composer{grid-template-columns:minmax(0,1fr)!important}.composer>section{min-width:0}.content{min-width:0}}
 </style></head>
 <body>
 <header class="topbar">
@@ -99,12 +215,21 @@ section,.panel{padding:18px 16px}
 <p class="sub">This page calls the real LLM through <code>POST /v1/tailor/ai</code>. It only works when the server was started with a key. Sample data only.</p>
 </header>
 
-<div class="banner"><b>Human review is required.</b> The LLM only sees numbered blocks from the uploaded resume and the job, and every draft line must cite its sources like <span class="cite">[S2]</span>. The server re-checks this mechanically at approval and export: uncited lines, unknown citations, invented numbers or names, and lines whose wording leaves the cited sources all block approval. It is still not a fact check - a cited line can still twist a source's meaning, and qualifier inflation ("advanced Excel") can slip through. Review by eye.</div>
+<details class="fold safeguard"><summary><span><b>Human review is required.</b> <span class="sumsub">Mechanical checks, not fact checking</span></span></summary><div class="foldbody">The LLM only sees numbered blocks from the uploaded resume and the job, and every draft line must cite its sources like <span class="cite">[S2]</span>. The server re-checks this mechanically at approval and export: uncited lines, unknown citations, invented numbers or names, and lines whose wording leaves the cited sources all block approval. It is still not a fact check - a cited line can still twist a source's meaning, and qualifier inflation ("advanced Excel") can slip through. Review by eye.</div></details>
 
 <section id="loginbox"><h2>Sign in</h2>
 <div id="loginctl">Checking sign-in mode...</div>
 <div id="loginmsg" class="msg"></div></section>
 
+<section id="s3" class="off canvas"><h2><b>3</b>Review the AI draft <span id="status" class="tag">draft</span></h2>
+<div id="flags"></div>
+<h3 style="font-size:14px;margin:10px 0 4px">Tailored resume</h3>
+<pre id="dres"></pre>
+<h3 style="font-size:14px;margin:10px 0 4px">Cover note</h3>
+<pre id="dnote"></pre>
+<div class="toolrow"><button id="approve">Approve (human decision)</button><button id="reject" class="sec">Reject</button></div>
+<div id="decision" class="msg"></div></section>
+<div class="composer">
 <section id="s1"><h2><b>1</b>Resume text</h2>
 <textarea id="resume">Asha Verma
 B.Tech Computer Science, IIITM Gwalior, 2027
@@ -118,14 +243,8 @@ Skills: Python, Git, Excel, communication</textarea>
 <div><button id="gen">Generate AI draft</button></div>
 <div id="genmsg" class="msg"></div></section>
 
-<section id="s3" class="off"><h2><b>3</b>Review the AI draft <span id="status" class="tag">draft</span></h2>
-<div id="flags"></div>
-<h3 style="font-size:14px;margin:10px 0 4px">Tailored resume</h3>
-<pre id="dres"></pre>
-<h3 style="font-size:14px;margin:10px 0 4px">Cover note</h3>
-<pre id="dnote"></pre>
-<div class="toolrow"><button id="approve">Approve (human decision)</button><button id="reject" class="sec">Reject</button></div>
-<div id="decision" class="msg"></div></section>
+</div>
+
 <div class="pagefoot">Slate demo build.</div>
 </div>
 <script>
@@ -291,4 +410,13 @@ document.getElementById("approve").onclick=()=>decide("approve");
 document.getElementById("reject").onclick=()=>decide("reject");
 // URL fragments never authorize parsing, model calls, or decisions.
 </script>
-</main></body></html>
+<script>
+// Keep the active page visible as a single moving selection, including wrapped nav.
+(()=>{const nav=document.querySelector('.nav');if(!nav)return;
+const indicator=document.createElement('span');indicator.className='nav-indicator';indicator.setAttribute('aria-hidden','true');nav.prepend(indicator);
+function place(){const link=nav.querySelector('.nlink.active');if(!link)return;indicator.style.width=link.offsetWidth+'px';indicator.style.height=link.offsetHeight+'px';indicator.style.transform=`translate(${link.offsetLeft}px,${link.offsetTop}px)`;}
+place();requestAnimationFrame(()=>nav.classList.add('motion-ready'));
+new MutationObserver(place).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});new ResizeObserver(place).observe(nav);document.fonts?.ready.then(place);
+})();
+</script>
+</body></html>
