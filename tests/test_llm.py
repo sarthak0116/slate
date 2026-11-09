@@ -12,8 +12,9 @@ def test_mock_records_prompt_and_replies():
 
 
 def test_gemini_requires_key(monkeypatch):
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
-    with pytest.raises(LLMError, match="LLM_API_KEY"):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_API_KEY", "synthetic-groq-key-not-for-gemini")
+    with pytest.raises(LLMError, match="GEMINI_API_KEY"):
         GeminiLLM().generate("hi")
 
 
