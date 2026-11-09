@@ -68,3 +68,25 @@ uvicorn slate_api.app:app --app-dir agents --reload
 
 Open `http://127.0.0.1:8000/interview` to go straight to the interview, or
 `http://127.0.0.1:8000` for the full Slate page. Keep the terminal running.
+
+## Separate workspace pages
+
+The local web app now has `/resume`, `/targets`, `/draft`, `/comparisons`,
+`/roadmap`, `/interview` and `/ai`, with `/` opening the resume page. Resume,
+target and draft navigation keeps the current unsaved editor text within the
+workspace document. A reload or a move outside that document warns before
+losing unsaved changes. Only saved source/target/draft selections are restored
+after a reload, and they are re-read from the authenticated API. Selected ids
+are kept in this tab's session storage under a token fingerprint, not shared
+between accounts. Signing out clears the current tab's selected context.
+
+The sample-comparison and Data Analyst roadmap pages remain demos. The AI
+page remains a separate opt-in fixture flow with its own source input. The
+interview page has its own role and saved-resume selection. No page navigation
+starts a provider call, approves a draft, or sends an application.
+
+Synthetic browser regressions: `scripts/check_pages_ui.py` covers page routes,
+saved-context restore, approval/download, unsaved-edit behavior and account
+isolation at desktop and mobile widths. Existing browser suites cover source,
+target, draft handoff, literal output and interview behavior. These are local
+checks, not proof of cloud deployment or actual microphone/provider operation.
