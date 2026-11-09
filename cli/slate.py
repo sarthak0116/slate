@@ -114,12 +114,20 @@ def cmd_interview(a):
     for c in r["carriedFromEarlier"]:
         print(f"(carried over: {c})")
     q = r["firstQuestion"]
+    print("Type /end (or finish input) to end and get your report.")
     while True:
         print("\nQ: " + q)
         try:
             ans = input("> ")
         except EOFError:
-            print("\n(no more input; session left unfinished)")
+            print("\n(no more input; ending interview and preparing feedback)")
+            ans = "/end"
+        if ans.strip().lower() == "/end":
+            fb = call(a.server, "POST", f"/interview/{sid}/end", {})
+            print("\nfeedback: " + fb["summary"])
+            for w in fb["weakAreas"]:
+                print("weak area: " + w)
+            print(f"transcriptRef: {fb['transcriptRef']}")
             return
         r = call(a.server, "POST", f"/interview/{sid}/answer", {"text": ans})
         if r.get("done"):

@@ -19,6 +19,7 @@ class SlateService:
     def __init__(self, store=None):
         self._resumes = {}
         self._texts = {}
+        self._targets = {}
         self.approvals = ApprovalStore()
         self.interviews = InterviewStore()
         self._store = store
@@ -26,6 +27,7 @@ class SlateService:
             st = store.load()
             if st:
                 self._resumes, self._texts = st["resumes"], st["texts"]
+                self._targets = st.get("targets", {})
                 self.approvals._drafts, self.approvals._n = st["drafts"], st["draftN"]
                 self.interviews._sessions, self.interviews._n = st["sessions"], st["sessionN"]
 
@@ -44,7 +46,7 @@ class SlateService:
         if self._store is not None:
             self._store.save({"resumes": self._resumes, "texts": self._texts,
                               "drafts": self.approvals._drafts, "draftN": self.approvals._n,
-                              "sessions": self.interviews._sessions, "sessionN": self.interviews._n})
+                              "sessions": self.interviews._sessions, "sessionN": self.interviews._n, "targets": self._targets})
 
     def _resume(self, rid):
         r = self._resumes.get(rid)
@@ -53,6 +55,26 @@ class SlateService:
         return r
 
     def _violations(self, resume_id, content) -> list:
+        if content.get("outputMode") == "source_preserving_draft_not_rewrite":
+            import hashlib
+            from .targets import source_preserving_content
+            target = self.get_target(content.get("targetId"))
+            original = self.get_resume(resume_id)["sourceText"]
+            if content.get("originalSourceSha256") != hashlib.sha256(original.encode("utf-8")).hexdigest() or content.get("targetSnapshot") != target:
+                return ["Source or target version binding changed. Create a fresh draft."]
+            try:
+                rebuilt = source_preserving_content(original, self._resume(resume_id).get("skillEvidence", []), target)
+            except ValueError as e:
+                return ["Source preservation cannot be checked: " + str(e)]
+            if any(content.get(key) != rebuilt[key] for key in ("baselineSha256", "originalSha256", "targetSha256")):
+                return ["Source preservation hashes changed. Create a fresh draft."]
+            baseline = rebuilt["tailoredResume"]
+            body = content.get("tailoredResume", "")
+            if not body.startswith(baseline):
+                return ["The preserved original source block cannot be changed in this mode. Edit and parse the original resume to create a new source version."]
+            # Only the byte-exact original/source-labelled builder block is
+            # excluded. Appended notes and the cover note keep normal gates.
+            return validate(self._resume(resume_id), self._texts[resume_id], body[len(baseline):], content.get("coverNote", ""))
         return validate(self._resume(resume_id), self._texts[resume_id],
                         content.get("tailoredResume", ""), content.get("coverNote", ""))
 
@@ -126,6 +148,60 @@ class SlateService:
         skills = self._resume(resume_id)["skills"] if resume_id else []
         return {"jobs": J.search_jobs(query, location, skills)}
 
+    def create_target(self, title, organization, raw_text, source_url="", parent_target_id=None):
+        import uuid
+        from .targets import snapshot_target
+        try:
+            snapshot = snapshot_target(title, organization, raw_text, source_url)
+        except ValueError as e:
+            raise SlateError("invalid_target", str(e))
+        if parent_target_id:
+            self.get_target(parent_target_id)
+        tid = "target_" + uuid.uuid4().hex
+        snapshot.update(targetId=tid, parentTargetId=parent_target_id)
+        self._targets[tid] = snapshot
+        lineage, cursor = set(), parent_target_id
+        while cursor and cursor not in lineage:
+            lineage.add(cursor)
+            cursor = self._targets[cursor].get("parentTargetId")
+        invalidated = []
+        for did, draft in self.approvals._drafts.items():
+            if draft["content"].get("targetId") in lineage and draft["status"] == "approved":
+                draft["status"] = "draft"
+                invalidated.append(did)
+        self._persist()
+        return {"target": self.get_target(tid), "invalidatedDraftIds": invalidated}
+
+    def get_target(self, target_id):
+        import copy
+        if target_id not in self._targets:
+            raise SlateError("target_not_found", "No pasted target with that id.")
+        return copy.deepcopy(self._targets[target_id])
+
+    def list_targets(self):
+        return {"totalCount": len(self._targets), "targets": [self.get_target(tid) for tid in list(reversed(self._targets))[:100]]}
+
+    def tailor_target(self, resume_id, target_id):
+        import hashlib
+        from .targets import source_preserving_content
+        parsed = self._resume(resume_id)
+        target = self.get_target(target_id)
+        original = self.get_resume(resume_id)["sourceText"]
+        try:
+            content = source_preserving_content(original, parsed.get("skillEvidence", []), target)
+        except ValueError as e:
+            raise SlateError("invalid_source_preservation", str(e))
+        content.update(targetId=target_id, targetSnapshot=target,
+                       originalSourceSha256=hashlib.sha256(original.encode("utf-8")).hexdigest(),
+                       outputMode="source_preserving_draft_not_rewrite")
+        bad = self._violations(resume_id, content)
+        if bad:
+            raise SlateError("unsupported_claim", "Source-preserving draft failed checks: " + "; ".join(bad))
+        did = self.approvals.create_draft(resume_id, target_id, content)
+        self._persist()
+        return {"draftId": did, **content, "status": "draft", "requiresApproval": True,
+                "coverageNote": "Original source retained. Job requirements are user-pasted, not verified or fully parsed. No fit score or full CV rewrite is claimed."}
+
     def list_drafts(self):
         items = list(reversed(list(self.approvals._drafts.items())))
         return {"totalCount": len(items), "drafts": [
@@ -155,7 +231,7 @@ class SlateService:
         lines = ["Slate application draft (not a full original CV)",
                  "Draft: " + draft_id, "Source version: " + d["resumeId"],
                  "Original source SHA-256: " + source_hash,
-                 "Job: " + d["jobId"] + " (sample fixture, not live-verified)",
+                 ("Target: " + content["targetId"] + " (user-pasted, not verified)" if content.get("targetId") else "Job: " + d["jobId"] + " (sample fixture, not live-verified)"),
                  "Status: approved saved version", "",
                  "Human approval is not a fact check. Review before use.",
                  "Source skill provenance (not independent verification):"]
@@ -164,6 +240,13 @@ class SlateService:
                          " / " + e.get("reviewStatus", "not_user_reviewed"))
         lines += ["", "RESUME DRAFT", content.get("tailoredResume", ""),
                   "", "COVER NOTE", content.get("coverNote", "")]
+        if content.get("targetId"):
+            target = self.get_target(content["targetId"])
+            lines += ["", "PASTED TARGET CONTEXT - NOT APPLICANT EVIDENCE",
+                      "Title: " + target["title"], "Organization: " + target.get("company", ""),
+                      "Source kind: " + target["sourceKind"], "Target SHA-256: " + target["sourceSha256"],
+                      "User-supplied URL (not fetched or verified): " + target.get("sourceUrl", ""),
+                      "Raw pasted text:", target["rawText"]]
         return "\n".join(lines) + "\n"
 
     def _tailor(self, resume_id, job_id) -> dict:
@@ -221,14 +304,54 @@ class SlateService:
             raise SlateError("role_unknown", "No sample listings for that role yet.")
         return {"milestones": ms}
 
-    def _start_interview(self, target_role, mode="text") -> dict:
-        if mode != "text":
-            raise SlateError("mode_unsupported", "Only text mode in the MVP.")
-        return self.interviews.start(target_role, self.interviews.past_feedback())
+    def _interview_resume_context(self, resume_id):
+        if not resume_id:
+            return {}
+        parsed = self._resume(resume_id)
+        # Send only bounded structured facts, never the original resume text.
+        education = [
+            {"degree": str(item.get("degree", ""))[:120],
+             "institute": str(item.get("institute", ""))[:160],
+             "year": item.get("year")}
+            for item in parsed.get("education", []) if isinstance(item, dict)
+        ][:12]
+        experience = [
+            {"title": str(item.get("title", ""))[:120],
+             "org": str(item.get("org", ""))[:160],
+             "months": item.get("months")}
+            for item in parsed.get("experience", []) if isinstance(item, dict)
+        ][:20]
+        return {
+            "name": str(parsed.get("name", ""))[:120],
+            "skills": [str(skill)[:80] for skill in parsed.get("skills", [])[:80]],
+            "education": education,
+            "experience": experience,
+        }
+    def _start_interview(self, target_role, mode="text", resume_id=None) -> dict:
+        if mode not in ("text", "voice"):
+            raise SlateError("mode_unsupported", "Interview mode must be 'text' or 'voice'.")
+        if not isinstance(target_role, str) or not target_role.strip():
+            raise SlateError("role_unknown", "Enter a target role before starting the interview.")
+        context = self._interview_resume_context(resume_id)
+        return self.interviews.start(target_role.strip()[:120],
+                                     self.interviews.past_feedback(target_role),
+                                     resume_context=context, mode=mode)
 
-    def _answer_interview(self, session_id, text) -> dict:
+    def _answer_interview(self, session_id, text, delivery_metrics=None) -> dict:
         try:
-            return self.interviews.answer(session_id, text)
+            return self.interviews.answer(session_id, text, delivery_metrics)
+        except KeyError:
+            raise SlateError("session_not_found", "No interview session with that id.")
+        except ValueError as e:
+            if str(e) == "answer_empty":
+                raise SlateError("answer_empty", "Enter or dictate an answer before submitting.")
+            if str(e) in ("interview_complete", "interview_ended"):
+                raise SlateError("interview_ended", "This interview has ended.")
+            raise
+
+    def _end_interview(self, session_id) -> dict:
+        try:
+            return self.interviews.end(session_id)
         except KeyError:
             raise SlateError("session_not_found", "No interview session with that id.")
 
@@ -270,5 +393,10 @@ class SlateService:
 
     def interview_feedback(self, *a, **k):
         r = self._interview_feedback(*a, **k)
+        self._persist()
+        return r
+
+    def end_interview(self, *a, **k):
+        r = self._end_interview(*a, **k)
         self._persist()
         return r

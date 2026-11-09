@@ -22,6 +22,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field, StrictBool
 
+# Load local environment files without overriding values already set by the shell.
+try:
+    from dotenv import load_dotenv
+    _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    load_dotenv(os.path.join(_ROOT, ".env"))
+    load_dotenv(os.path.join(_ROOT, "backend", ".env"))
+except ImportError:
+    pass
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from slate_core import SlateService, SlateError  # noqa: E402
 from slate_core.resume import ParseError, extract_pdf_text, MAX_PDF_BYTES  # noqa: E402
@@ -30,12 +39,16 @@ from slate_core.auth import AuthError  # noqa: E402
 STATUS = {"resume_not_found": 404, "job_not_found": 404, "draft_not_found": 404, "session_not_found": 404,
           "resume_unreadable": 422, "invalid_decision": 422, "role_unknown": 404, "mode_unsupported": 422,
           "draft_not_approved": 403, "draft_rejected": 409, "unsupported_claim": 422,
-          "demo_reset_disabled": 403, "reset_not_confirmed": 422}
+          "demo_reset_disabled": 403, "reset_not_confirmed": 422,
+          "answer_empty": 422, "interview_complete": 409, "interview_ended": 409}
 STATUS.setdefault("ai_not_configured", 503)  # appended, so sibling PRs editing the dict do not collide
 STATUS.setdefault("unauthenticated", 401)
 STATUS.setdefault("invalid_token", 401)
 STATUS.setdefault("auth_not_configured", 503)
 STATUS.setdefault("state_conflict", 409)
+STATUS.setdefault("invalid_target", 422)
+STATUS.setdefault("invalid_source_preservation", 422)
+STATUS.setdefault("target_not_found", 404)
 
 class ResumeIn(BaseModel):
     text: str = Field(max_length=200_000)  # plain text for now; PDF upload is an open question in the contract
@@ -48,6 +61,17 @@ class TailorIn(BaseModel):
     resumeId: str
     jobId: str
 
+class TargetIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    organization: str = Field(default="", max_length=160)
+    rawText: str = Field(min_length=1, max_length=20_000)
+    sourceUrl: str = Field(default="", max_length=2000)
+    parentTargetId: Optional[str] = None
+
+class TargetTailorIn(BaseModel):
+    resumeId: str
+    targetId: str
+
 class EditIn(BaseModel):
     tailoredResume: Optional[str] = None
     coverNote: Optional[str] = None
@@ -57,11 +81,13 @@ class RoadmapIn(BaseModel):
     targetRole: str
 
 class MockIn(BaseModel):
-    targetRole: str
+    targetRole: str = Field(min_length=1, max_length=120)
     mode: str = "text"
+    resumeId: Optional[str] = None
 
 class AnswerIn(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=20_000)
+    deliveryMetrics: Optional[dict] = None
 
 class ApprovalIn(BaseModel):
     draftId: str
@@ -111,6 +137,23 @@ def _mount(r: APIRouter, get_svc):
     def jobs(request: Request, query: str = "", location: str = "", resumeId: Optional[str] = None):
         with get_svc(request) as svc: return svc.jobs(query, location, resumeId)
 
+    @r.post("/targets")
+    def create_target(request: Request, b: TargetIn):
+        with get_svc(request) as svc:
+            return svc.create_target(b.title, b.organization, b.rawText, b.sourceUrl, b.parentTargetId)
+
+    @r.get("/targets")
+    def list_targets(request: Request):
+        with get_svc(request) as svc: return svc.list_targets()
+
+    @r.get("/targets/{target_id}")
+    def get_target(request: Request, target_id: str):
+        with get_svc(request) as svc: return svc.get_target(target_id)
+
+    @r.post("/tailor/target")
+    def tailor_target(request: Request, b: TargetTailorIn):
+        with get_svc(request) as svc: return svc.tailor_target(b.resumeId, b.targetId)
+
     @r.post("/tailor")
     def tailor(request: Request, b: TailorIn):
         with get_svc(request) as svc: return svc.tailor(b.resumeId, b.jobId)
@@ -156,11 +199,17 @@ def _mount(r: APIRouter, get_svc):
 
     @r.post("/interview/mock")
     def mock(request: Request, b: MockIn):
-        with get_svc(request) as svc: return svc.start_interview(b.targetRole, b.mode)
+        with get_svc(request) as svc:
+            return svc.start_interview(b.targetRole, b.mode, b.resumeId)
 
     @r.post("/interview/{sid}/answer")
     def answer(request: Request, sid: str, b: AnswerIn):
-        with get_svc(request) as svc: return svc.answer_interview(sid, b.text)
+        with get_svc(request) as svc:
+            return svc.answer_interview(sid, b.text, b.deliveryMetrics)
+
+    @r.post("/interview/{sid}/end")
+    def end_interview(request: Request, sid: str):
+        with get_svc(request) as svc: return svc.end_interview(sid)
 
     @r.get("/interview/{sid}/feedback")
     def feedback(request: Request, sid: str):
@@ -205,9 +254,16 @@ def _shell(r: APIRouter) -> FastAPI:
     async def _val(_: Request, e: RequestValidationError):
         return JSONResponse({"error": {"code": "bad_request", "message": "Request body or query is invalid."}}, status_code=422)
 
-    web = os.path.join(os.path.dirname(__file__), "..", "..", "web", "index.html")
-    web_ai = os.path.join(os.path.dirname(__file__), "..", "..", "web", "ai.html")
+    web_root = os.path.join(os.path.dirname(__file__), "..", "..", "web")
+    web = os.path.join(web_root, "index.html")
+    web_ai = os.path.join(web_root, "ai.html")
+    web_interview = os.path.join(web_root, "interview.html")
 
+    @app.get("/resume", include_in_schema=False)
+    @app.get("/targets", include_in_schema=False)
+    @app.get("/draft", include_in_schema=False)
+    @app.get("/comparisons", include_in_schema=False)
+    @app.get("/roadmap", include_in_schema=False)
     @app.get("/", include_in_schema=False)
     def home():
         return FileResponse(web) if os.path.exists(web) else JSONResponse({"message": "Slate API"})
@@ -215,6 +271,10 @@ def _shell(r: APIRouter) -> FastAPI:
     @app.get("/ai", include_in_schema=False)
     def ai_page():
         return FileResponse(web_ai) if os.path.exists(web_ai) else JSONResponse({"message": "AI demo page not found"})
+
+    @app.get("/interview", include_in_schema=False)
+    def interview_page():
+        return FileResponse(web_interview) if os.path.exists(web_interview) else JSONResponse({"message": "Interview page not found"})
 
     return app
 

@@ -98,17 +98,13 @@ A tailor result is always a draft. Nothing leaves the system without the approva
 
 ### 5. Mock interview
 
-`POST /v1/interview/mock` with `{ "targetRole": "Data Analyst", "mode": "text" }` starts a session and returns `{ "sessionId": "int_101" }`.
+`POST /v1/interview/mock` accepts `{ "targetRole": "Data Analyst", "mode": "text", "resumeId": "res_123" }`; `mode` may be `text` or `voice`, and `resumeId` is optional. The authenticated service scopes the resume to the verified user and sends only bounded structured resume facts to the server-side Gemini coach. The response includes `sessionId`, `firstQuestion`, `carriedFromEarlier`, `mode`, `aiPowered`, and `coachMode`.
 
-`GET /v1/interview/{sessionId}/feedback`
+`POST /v1/interview/{sessionId}/answer` accepts `{ "text": "...", "deliveryMetrics": {...} }`; deliveryMetrics is optional and contains bounded numeric features derived locally from the microphone recording (speaking rate, pause ratio/count, filler count, volume variation, estimated pitch range). Raw audio is not uploaded. The response returns `done:false`, `nextQuestion`, `isFollowUp`, `evaluation`, and `aiPowered`. Evaluation separates content score/feedback from delivery score/feedback when voice metrics are available. Gemini can chain contextual follow-ups; there is no fixed question count or automatic completion.
 
-```json
-{
-  "summary": "...",
-  "weakAreas": ["system design basics"],
-  "transcriptRef": "int_101"
-}
-```
+`POST /v1/interview/{sessionId}/end` explicitly ends the session and returns its final feedback. Answers after this endpoint returns are rejected with409. The UI must not end the session merely because a question bank is exhausted.
+
+`GET /v1/interview/{sessionId}/feedback` returns a summary, average content score, weak areas, strengths, improvements, per-answer reviews, delivery reviews, transcript reference, mode, ended state, and coach mode (`gemini`, `mixed`, or `deterministic_fallback`). Model errors or missing Gemini configuration fall back to deterministic content evaluation and a clearly labeled rule-based delivery estimate. Browser voice mode uses speech recognition, local audio feature extraction and speech synthesis where supported; typed answers remain available. The optional camera is a local live preview only: video is not uploaded, stored, or analyzed for face, emotion, or personality.
 
 Interview memory must persist: a later session can reference earlier feedback through `transcriptRef`.
 
@@ -205,3 +201,10 @@ unbulleted unknown phrases. They remain outside parsed.skills/matching until an
 explicit user review adds them as user_statement. Consumers should not treat
 uncertainSkills as extracted competence. Existing saved parses need explicit
 reparse, not an automatic migration.
+
+## Private pasted targets (additive; fixture routes unchanged)
+- `POST /v1/targets`: `{title, organization?, rawText, sourceUrl?, parentTargetId?}`. `rawText` is preserved as supplied; source URL is display-only, never fetched. Returns immutable `target` with UUID `targetId`, `sourceKind=user_pasted_not_verified`, raw-text SHA-256 and `invalidatedDraftIds`. Revising a target creates a new version and clears approvals for its ancestor target versions. The old snapshots remain unchanged and may be explicitly reviewed again.
+- `GET /v1/targets`, `GET /v1/targets/{targetId}`: only the authenticated user's saved targets. These are not feed results or verified employer listings.
+- `POST /v1/tailor/target`: `{resumeId,targetId}`. Returns an unapproved `source_preserving_draft_not_rewrite` bound to the exact saved resume version, original-source SHA-256 and target snapshot. Job requirements stay target context, never applicant evidence. Original source is retained literally, including details the parser does not structure. This mode is not a formatted full CV or a generative rewrite.
+- Existing edit, approval and download routes apply. Original-source block changes are rejected in this mode; reparse edited original text to make a new resume version. Appended notes and the cover note keep ordinary claim checks. Every successful draft edit creates a new unapproved version; source skill review and target revision clear ancestor approvals. Export rechecks the saved version, hashes and target binding, then labels pasted target context separately from applicant source.
+- Known-phrase checks do not verify facts, job validity, all requirements, licenses, employers, or semantic truth. Unknown requirements remain visible in raw target text, with no fit score. No application is sent. AI tailoring remains the existing fixture-only opt-in path.
