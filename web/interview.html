@@ -160,7 +160,7 @@ button.danger:hover{background:#8c1f24}
 <script>
 const $=id=>document.getElementById(id);
 let sid=null, token=()=>sessionStorage.getItem("slate_token")||"", recognition=null, listening=false, answerPrefix="";
-let cameraStream=null,audioStream=null,recorder=null,audioChunks=[],cameraOn=false;
+let cameraStream=null,audioStream=null,recorder=null,audioChunks=[],cameraOn=false,cameraPending=false;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function msg(id,text,error=false){$(id).textContent=text;$(id).className="status "+(error?"error":"")}
 let contextEpoch=0,busy=false,sessionMode="text",sessionEnded=false;
@@ -220,7 +220,7 @@ $("start").onclick=async()=>{
  }catch(e){if(e instanceof StaleResponse)return;msg("setupStatus",e.message,true)}finally{if(c.epoch===contextEpoch&&c.auth===token()){busy=false;$("start").disabled=false}}
 };
 function speak(text,onDone){
- const c=context();const done=()=>{if(current(c)&&onDone)onDone()};
+ const c=context();let completed=false;const done=()=>{if(!completed&&current(c)){completed=true;if(onDone)onDone()}};
  if(!("speechSynthesis" in window)){done();return}
  window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);
  utterance.onend=done;utterance.onerror=done;
@@ -232,7 +232,7 @@ async function prepareAudio(){
  catch(e){if(!current(c))return;audioStream=null;$("audioStatus").textContent="Microphone unavailable. You can still answer by typing; delivery scoring will be unavailable."}
 }
 function beginAnswerCapture(){
- if(!audioStream||!window.MediaRecorder)return;
+ if(!audioStream||!window.MediaRecorder||(recorder&&recorder.state!=="inactive"))return;
  try{const chunks=[];recorder=new MediaRecorder(audioStream);recorder.answerChunks=chunks;recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};recorder.start();$("audioStatus").textContent="Recording this answer locally…"}
  catch(e){recorder=null;$("audioStatus").textContent="Audio recording unavailable; transcript-only evaluation will be used."}
 }
@@ -282,17 +282,19 @@ async function measureDelivery(blob,transcript){
  }catch(e){return null}
 }
 async function toggleCamera(){
- const c=context();
+ if(cameraPending)return;const c=context();
  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;$("cameraPreview").srcObject=null;cameraOn=false;$("cameraToggle").textContent="Enable camera";$("cameraStatus").textContent="Camera is off.";return}
+ cameraPending=true;$("cameraToggle").disabled=true;
  try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});if(!current(c)){stream.getTracks().forEach(t=>t.stop());return}cameraStream=stream;$("cameraPreview").srcObject=cameraStream;cameraOn=true;$("cameraToggle").textContent="Turn camera off";$("cameraStatus").textContent="Camera preview is active on this device only. No video is uploaded or recorded."}
  catch(e){if(!current(c))return;msg("cameraStatus","Camera permission denied or unavailable. You can continue without it.",true)}
+ finally{if(current(c)){cameraPending=false;$("cameraToggle").disabled=false}}
 }
 function stopDevices(){
  if(recognition){recognition.onresult=null;recognition.onerror=null;recognition.onend=null;try{recognition.abort()}catch(e){}recognition=null}listening=false;
  if(recorder&&recorder.state!=="inactive"){try{recorder.stop()}catch(e){}}recorder=null;audioChunks=[];
  if(audioStream)audioStream.getTracks().forEach(t=>t.stop());
  if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
- audioStream=null;cameraStream=null;$("cameraPreview").srcObject=null;
+ audioStream=null;cameraStream=null;cameraPending=false;$("cameraPreview").srcObject=null;
  if("speechSynthesis" in window)window.speechSynthesis.cancel();
 }
 $("cameraToggle").onclick=toggleCamera;
