@@ -1,5 +1,6 @@
 import io
 import re
+import unicodedata
 from .skills import skill_evidence, resume_skill_evidence
 from .resume_review import section_previews
 
@@ -25,7 +26,7 @@ def parse_resume(text: str) -> dict:
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     if not lines:
         raise ParseError("No resume content remains after removing template guidance.")
-    name = lines[0] if len(lines[0].split()) <= 5 and "@" not in lines[0] else "Unknown"
+    name, name_evidence = name_candidate(lines)
     evidence, uncertain = resume_skill_evidence(text)
     skills = [item["skill"] for item in evidence]
     education, experience = [], []
@@ -39,11 +40,43 @@ def parse_resume(text: str) -> dict:
         if m and not re.search(r"b\.?tech|bachelor", l, re.I):
             experience.append({"title": m.group(1).title(), "org": m.group(2).strip(),
                                "months": int(m.group(3)) if m.group(3) else None})
-    return {"name": name, "skills": skills, "education": education, "experience": experience,
+    return {"name": name, "nameEvidence": name_evidence, "skills": skills, "education": education, "experience": experience,
             "skillEvidence": evidence, "uncertainSkills": uncertain,
             "sectionReview": section_previews(text),
             "parseWarnings": ["Skill candidates from phrase matches and explicit lists, not verified proficiency or a complete resume assessment. "
                               "Review the detected skills; education and work-history extraction are limited."]}
+
+def name_candidate(lines):
+    """A bounded header heuristic, never identity verification.
+
+    Skip only explicit document titles/contact lines before the first content
+    line. Never scan past a section or job title hunting for a plausible name.
+    """
+    titles = {"resume", "résumé", "curriculum vitae", "cv", "bio-data", "biodata"}
+    sections = {"skills", "key skills", "technical skills", "education", "experience",
+                "work experience", "summary", "profile", "career objective", "objective",
+                "compétences", "habilidades", "fähigkeiten", "कौशल", "技能",
+                "qualifications", "academic background", "formation", "educación", "ausbildung", "शिक्षा", "教育",
+                "employment", "employment history", "professional experience", "expérience", "experiencia", "berufserfahrung", "अनुभव", "工作经历"}
+    for line in lines[:8]:
+        label = line.casefold().rstrip(':：')
+        if label in titles:
+            continue
+        if "@" in line or re.match(r"^(?:e-?mail|phone|mobile|tel|contact|https?://|www\.)\b", line, re.I) or re.fullmatch(r"[+()\d\s.-]{7,}", line):
+            continue
+        if label in sections:
+            break
+        if re.match(r"^(?:name|full name)\s*[:：]", line, re.I):
+            line = re.sub(r"^(?:name|full name)\s*[:：]\s*", "", line, flags=re.I)
+        # Names can be one word or contain apostrophes/hyphens. Reject digits,
+        # contact syntax and unsupported punctuation, not non-Latin letters.
+        if (1 <= len(line.split()) <= 5 and len(line) <= 100
+                and all(unicodedata.category(c)[0] in {"L", "M"} or c in " '-’." for c in line)
+                and any(c.isalpha() for c in line)):
+            return line, {"status": "header_candidate_not_verified", "sourceText": line}
+        break
+    return "Unknown", {"status": "not_recognized", "sourceText": None}
+
 
 def qualification_lines(text):
     """Conservative literal lines eligible for degree/work extraction, not proof."""

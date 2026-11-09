@@ -149,6 +149,45 @@ def _context(low, match):
     return low[start:end]
 
 
+def plain_list_review_candidates(text):
+    """Expose an initial unbulleted skills block for review, never count it.
+
+    PDF extraction can drop bullets, but short lines can also be wrapped prose
+    or an unrecognized section. At least two concise initial lines are needed;
+    continuation lines after a bullet/inline list are deliberately excluded.
+    """
+    pending, out = [], []
+    def flush():
+        if len(pending) >= 2:
+            for phrase in pending:
+                if not skill_evidence(phrase):
+                    out.append({"skill": normalized(phrase), "matchedText": phrase,
+                                "source": "ambiguous_plain_skills_block",
+                                "reason": "Unbulleted skills-section text may be a list or wrapped prose; not counted without review."})
+        pending.clear()
+    active = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        heading = _SKILL_HEADING.fullmatch(line)
+        if heading:
+            flush(); active = not bool(heading.group(1)); continue
+        if not active:
+            continue
+        if not line or _SECTION_HEADING.fullmatch(line) or line.endswith((":", "：")):
+            flush(); active = False; continue
+        if (re.match(r"^[•*\-–]\s+", line) or re.search(r"[,;|•]", line)
+                or len(line) > 70 or len(line.split()) > 5
+                or any(c in line for c in "@:/<>\\.?!")
+                or re.search(r"\b(?:I|my|when|through|demonstrated|seeking|proven|and|the|with|from|since|of)\b", line, re.I)):
+            flush(); active = False; continue
+        if any(c.isalpha() for c in line):
+            pending.append(line)
+        if len(pending) >= 64:
+            flush(); active = False
+    flush()
+    return out[:64]
+
+
 def resume_skill_evidence(text):
     """Separate plain mentions from negative/aspirational/instructional contexts.
 
@@ -175,4 +214,6 @@ def resume_skill_evidence(text):
             accepted[e["skill"]] = e
         else:
             flagged.setdefault(e["skill"], dict(e, reason="Negative, aspirational or instructional context; not counted without review."))
+    for e in plain_list_review_candidates(text):
+        flagged.setdefault(e["skill"], e)
     return sorted(accepted.values(), key=lambda e: e["skill"]), [flagged[k] for k in sorted(flagged) if k not in accepted]

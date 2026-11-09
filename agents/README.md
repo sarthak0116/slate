@@ -170,3 +170,20 @@ was checked for tracked runtime databases/uploads; none were found. No existing
 state is deleted or rewritten by the ignore change. Keep local state private;
 for an existing shared/tracked database, stop and review an explicit migration or
 access change instead of blindly deleting files or rewriting history.
+
+### Header candidates and ambiguous plain skill lists
+
+Explicit document titles (Resume/CV/etc.) and obvious contact lines are skipped
+in a bounded header scan. `nameEvidence` records a literal header candidate or
+`not_recognized`; this does not verify identity or solve arbitrary names/layouts.
+It does not search beyond the first unsupported content/section for a name.
+
+A bounded initial skills block with at least two short unbulleted lines now
+appears in `uncertainSkills` with `ambiguous_plain_skills_block` provenance.
+These unknown phrases are NOT counted in matches/drafts. PDF extraction can lose
+bullets, but short lines can also be prose/unknown sections, so the user must
+review/add them intentionally. Added items remain user statements, not extracted
+or verified skills. Existing positive known phrases keep their normal literal
+candidate behavior. Wrapped continuations after bullet/inline prose are excluded.
+Single lines, blank-separated lists and unfamiliar layouts can still be missed.
+Previously saved parses are not silently migrated; reparse original source.
