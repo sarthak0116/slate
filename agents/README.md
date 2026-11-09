@@ -151,6 +151,17 @@ script checks all three fragments in an already signed-in context and verifies
 no POST requests occur. This is not general CSRF/XSS protection or proof that
 every decision originated with a human.
 
+### Edited resume source context
+
+Typing in the original resume text detaches the parsed source and all derived
+results on both pages. The edited text stays visible, but users must explicitly
+parse it before reviewing skills or generating drafts. A late response from a
+parse started before the edit cannot restore old source context. Saved server
+versions are preserved; this does not cancel an already-submitted request or
+remove saved data. Four synthetic browser cases cover each page after a parse
+and while a parse is pending, plus deliberate fresh parsing of the new text.
+
+
 ### Same-source draft context
 
 Classic and AI pages bind delayed draft/decision display updates to their draft

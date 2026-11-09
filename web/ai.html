@@ -157,6 +157,15 @@ async function initAuth(){
   }
 }
 initAuth();
+document.getElementById("resume").oninput=()=>{
+  sourceRequest++;sourceGeneration++;draftGeneration++;resumeId=null;draftId=null;
+  ["dres","dnote","flags","decision","genmsg"].forEach(id=>document.getElementById(id).textContent="");
+  document.getElementById("job").replaceChildren();
+  ["s2","s3"].forEach(id=>document.getElementById(id).classList.add("off"));
+  document.getElementById("parsed").textContent="Source text changed. Parse it again before generating a draft.";
+  document.getElementById("status").textContent="draft";
+  document.getElementById("status").className="tag draft";
+};
 document.getElementById("parse").onclick=async()=>{
   sourceRequest++;
   const msg=document.getElementById("parsed");
