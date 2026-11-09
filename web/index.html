@@ -20,7 +20,7 @@ a:hover{text-decoration:underline}
 .slink.active{background:var(--blue-soft);color:var(--blue);font-weight:600}
 .slink.sub{color:var(--mut);font-size:13.5px}
 .sidefoot{margin-top:auto;font-size:12px;color:var(--mut);border-top:1px solid var(--line);padding:12px 10px 0}
-.content{padding:28px 36px 64px;max-width:980px;width:100%;margin:0 auto}
+.content{min-width:0;padding:28px 36px 64px;max-width:980px;width:100%;margin:0 auto}
 .pagehead{margin:2px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .pagehead h1{font-size:24px;margin:0;color:var(--navy);letter-spacing:-.02em}
 .pagehead h1 span{color:var(--blue)}
@@ -38,8 +38,10 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--blue);outline-of
 select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff;max-width:100%}
 input[type=text],input[type=email],input:not([type]){font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
 label{font-size:13px;font-weight:600;color:var(--navy);display:block;margin:12px 0 4px}
+.draftgrid>div{min-width:0}
 .draftgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .draftgrid label:first-child{margin-top:0}
+#targetWorkspace input{width:100%;min-width:0}
 button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;margin:8px 8px 0 0}
 button:hover{background:#1d2f55}
 button.sec{background:#fff;color:var(--navy);border:1px solid var(--line)}
@@ -49,7 +51,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .toolrow button{margin:0}
 .toolrow select{flex:1 1 220px;min-width:0}
 .note{color:var(--mut);font-size:13px;margin:6px 0 8px}
-.msg{margin-top:8px;font-size:14px}
+.msg{margin-top:8px;font-size:14px;overflow-wrap:anywhere}
 .upl{font-size:13px;color:var(--mut)}
 input[type=file]{max-width:230px;font-size:12.5px}
 .bad{color:var(--bad)}
@@ -77,11 +79,11 @@ pre b{font-weight:600}
 code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}
 .pagefoot{margin-top:24px;color:var(--mut);font-size:12.5px}
 @media(max-width:820px){
-.layout{grid-template-columns:1fr}
+.layout{grid-template-columns:minmax(0,1fr)}
 .side{position:static;max-height:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px;border-right:0;border-bottom:1px solid var(--line)}
 .sidegroup{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px}
 .sidegroup.onpage,.sidetitle,.sidefoot{display:none}
-.content{padding:18px 14px 56px}
+.content{min-width:0;padding:18px 14px 56px}
 .draftgrid{grid-template-columns:1fr}
 }
 </style></head>
@@ -96,17 +98,18 @@ code{background:var(--soft);border:1px solid var(--line);border-radius:4px;paddi
 <a class="slink" href="/interview">Mock interview</a>
 </div>
 <div class="sidegroup onpage"><div class="sidetitle">On this page</div><a class="slink sub" href="#s1">1 &middot; Resume</a>
-<a class="slink sub" href="#s2">2 &middot; Compare</a>
+<a class="slink sub" href="#targetWorkspace">Your target</a>
+<a class="slink sub" href="#s2">2 &middot; Sample comparisons</a>
 <a class="slink sub" href="#s3">3 &middot; Draft</a>
 <a class="slink sub" href="#s4">4 &middot; Roadmap</a>
 <a class="slink sub" href="#s5">5 &middot; Interview</a></div>
-<div class="sidefoot">Local demo - sample data only, runs on this machine.</div>
+<div class="sidefoot">Local workspace. Sample comparisons are not live listings.</div>
 </aside>
 <div class="content">
 <header class="pagehead">
 <h1>Application workspace</h1>
-<p class="sub">A demo approval flow for application drafts. Automatic checks are simple rules, not fact checking, so a person must review every draft before it is used. Sign-in required; sample data only.</p>
-<p class="flowline"><b>Flow:</b> resume &rarr; compare &rarr; draft &rarr; approve &rarr; export, then roadmap and interview practice.</p>
+<p class="sub">Keep your source resume, paste a target description, and prepare a draft for review. Automatic checks are simple rules, not fact checking. Sample comparisons stay separate from your chosen target.</p>
+<p class="flowline"><b>Flow:</b> resume &rarr; your target &rarr; source-preserving draft &rarr; approve &rarr; download. Sample comparisons and practice are separate tools.</p>
 </header>
 
 <section id="loginbox"><h2>Sign in</h2>
@@ -138,7 +141,15 @@ Skills: Python, Git, Excel, communication</textarea>
 <div><button id="savereview">Save reviewed skills as new version</button></div>
 <div id="reviewmsg" class="msg"></div></div></section>
 
-<!-- TARGET-SELECTION-RESERVED: integration worker adds the real target / pasted job-description controls directly above (or at the top of) section#s2, before the sample comparisons. Keep this area free of decorative content. -->
+<section id="targetWorkspace"><h2>Your target</h2>
+<p class="note">Paste a job description you chose. Slate stores what you provide, not a verified job listing. No job feed, employer check, fit score, or application sending is included.</p>
+<div class="toolrow"><button id="refreshtargets" class="sec">Load saved targets</button><select id="savedtargets" aria-label="Saved target versions"><option value="">Choose a saved target</option></select><button id="opentarget" class="sec">Open target</button></div>
+<div class="draftgrid"><div><label for="targettitle">Role title</label><input id="targettitle" maxlength="120" placeholder="e.g. Staff nurse"></div><div><label for="targetorg">Organization (optional)</label><input id="targetorg" maxlength="160"></div></div>
+<label for="targeturl">Source URL (optional, not fetched or verified)</label><input id="targeturl" maxlength="2000" placeholder="https://...">
+<label for="targettext">Pasted job description</label><textarea id="targettext" maxlength="20000" placeholder="Paste the requirements here. Keep private details out unless you intend to store them."></textarea>
+<div class="toolrow"><button id="savetarget">Save new target version</button><button id="drafttarget" class="sec">Create source-preserving draft</button></div>
+<div id="targetmsg" class="msg"></div>
+<p class="note">This mode keeps the original resume text, including school, work and trade details the parser may miss. It does not rewrite, format a full CV, infer a qualification, or add job requirements as applicant facts. Review skills separately above. Original-source changes require a new parsed resume version; only notes after the preserved block and the cover note can be edited here.</p></section>
 <section id="s2" class="off"><h2><b>2</b>Sample job comparisons</h2>
 <p class="note">Demo score = share of a listing's skills found on the resume, over 5 sample listings. The 75% threshold from the deck is not implemented, so nothing here is claimed as a good match.</p>
 <p id="coverage" class="note">Only five analyst/tech fixtures are available. Retail and customer-service roles are not covered. Ranking these fixtures does not choose your career target; the percentages are not resume-quality or employability scores.</p>
@@ -162,19 +173,19 @@ Skills: Python, Git, Excel, communication</textarea>
 </div>
 <script>
 const $=id=>document.getElementById(id);
-let rid=null,did=null,sid=null;
+let rid=null,did=null,sid=null,tid=null,targetParent=null,targetDirty=false,targetEpoch=0;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function token(){return sessionStorage.getItem("slate_token")||""}
 class StaleResponse extends Error {}
 async function api(method,path,body){
-  const auth=token(),generation=sourceGeneration,requestEpoch=sourceRequest;
+  const auth=token(),generation=sourceGeneration,requestEpoch=sourceRequest,te=targetEpoch;
   const h={"content-type":"application/json"};
   if(auth) h["authorization"]="Bearer "+auth;
   let r;
   try{r=await fetch("/v1"+path,{method,headers:h,body:body?JSON.stringify(body):undefined})}
-  catch(e){if(auth!==token()||generation!==sourceGeneration||requestEpoch!==sourceRequest)throw new StaleResponse();throw e}
+  catch(e){if(auth!==token()||generation!==sourceGeneration||requestEpoch!==sourceRequest||te!==targetEpoch)throw new StaleResponse();throw e}
   const j=await r.json();
-  if(auth!==token()||generation!==sourceGeneration||requestEpoch!==sourceRequest) throw new StaleResponse();
+  if(auth!==token()||generation!==sourceGeneration||requestEpoch!==sourceRequest||te!==targetEpoch) throw new StaleResponse();
   if(r.status===401){await recoverSignIn();throw new StaleResponse()}
   if(!r.ok) throw new Error(j.error?j.error.message:"Request failed"); return j;
 }
@@ -196,7 +207,7 @@ function signedIn(email){
   resetAccountState();
   $("loginctl").innerHTML="";
   $("loginmsg").innerHTML='<span class="ok">Signed in as '+esc(email||"user")+'</span> <button class="sec" id="out">Sign out</button>';
-  loadSavedVersions();loadSavedDrafts();
+  loadSavedVersions();loadSavedDrafts();loadTargets();
   $("out").onclick=()=>{sessionStorage.removeItem("slate_token");if(window.google?.accounts?.id) google.accounts.id.disableAutoSelect();location.reload()};
 }
 async function initAuth(){
@@ -250,10 +261,13 @@ const on=id=>$(id).classList.remove("off");
 function say(id,t,bad){$(id).className="msg "+(bad?"bad":"ok");$(id).textContent=t}
 let sourceGeneration=0, sourceRequest=0, draftGeneration=0;
 function resetAccountState(){
-  sourceRequest++;resetSourceResults();rid=null;
+  sourceRequest++;resetSourceResults();rid=null;targetEpoch++;tid=null;targetParent=null;targetDirty=false;
+  ["targettitle","targetorg","targeturl","targettext","targetmsg"].forEach(id=>$(id).value!==undefined?$(id).value="":$(id).textContent="");
+  $("savedtargets").innerHTML='<option value="">Choose a saved target</option>';
   $("resume").value="";$("parsed").textContent="";$("skillreview").hidden=true;
   $("reviewskills").value="";$("confirmreview").checked=false;$("pdffile").value="";
   $("savedversions").innerHTML='<option value="">Choose a saved version</option>';
+  const selectedDraft=$("saveddrafts").value;
   $("saveddrafts").innerHTML='<option value="">Choose a saved draft</option>';
   ["draftlistmsg","savedmsg","reviewmsg","dmsg"].forEach(id=>$(id).textContent="");
 }
@@ -291,7 +305,9 @@ $("opensaved").onclick=async()=>{try{
 async function loadSavedDrafts(){try{
   if(!token())return;
   const result=await api("GET","/drafts");
+  const selectedDraft=$("saveddrafts").value;
   $("saveddrafts").innerHTML='<option value="">Choose a saved draft</option>'+result.drafts.map(d=>'<option value="'+esc(d.draftId)+'">'+esc(d.draftId)+' / '+esc(d.resumeId)+' / '+esc(d.status)+(d.aiGenerated?' / AI':'')+'</option>').join("");
+  if(result.drafts.some(d=>d.draftId===selectedDraft))$("saveddrafts").value=selectedDraft;
   say("draftlistmsg","Showing "+result.drafts.length+" of "+result.totalCount+" drafts, newest first.");
 }catch(e){if(e instanceof StaleResponse)return;say("draftlistmsg",e.message,1)}}
 $("refreshdrafts").onclick=loadSavedDrafts;
@@ -302,10 +318,18 @@ $("opendraft").onclick=async()=>{try{
   resetSourceResults();rid=d.resumeId;did=d.draftId;$("resume").value=d.source.sourceText;
   showParsed(d.source.parsed,"Saved draft source: "+rid+". Original upload, not added skill statements.");
   $("dres").value=savedRes=d.content.tailoredResume;$("dnote").value=savedNote=d.content.coverNote;
-  setStatus(d.status);refresh();on("s3");
+  displayTarget(d.content.targetSnapshot||null);setStatus(d.status);refresh();on("s3");
   say("dmsg","Opened exact saved draft "+d.draftId+". "+(d.violations.length?"Rule warnings: "+d.violations.join("; "):"No rule-detectable unsupported claim. Not a fact check.")+(d.content.aiGenerated?" AI source citations retained.":""));
   await loadJobs();
 }catch(e){if(e instanceof StaleResponse)return;say("draftlistmsg",e.message,1)}};
+function clearTargetDraft(){draftGeneration++;did=null;savedRes="";savedNote="";$("dres").value="";$("dnote").value="";setStatus("draft");refresh();$("s3").classList.add("off")}
+function displayTarget(t){targetEpoch++;tid=t?.targetId||null;targetParent=tid;targetDirty=false;$("targettitle").value=t?.title||"";$("targetorg").value=t?.company||"";$("targeturl").value=t?.sourceUrl||"";$("targettext").value=t?.rawText||"";say("targetmsg",t?"Selected saved target: "+t.title+". User-pasted, not employer-verified.":"No pasted target bound to this fixture draft.")}
+["targettitle","targetorg","targeturl","targettext"].forEach(id=>$(id).oninput=()=>{targetEpoch++;sourceRequest++;tid=null;targetDirty=true;clearTargetDraft();say("targetmsg","Target changed. Save a new target version before making a draft; old approval does not apply to this text.")});
+async function loadTargets(){const epoch=targetEpoch;try{if(!token())return;const r=await api("GET","/targets");if(epoch!==targetEpoch)return;const selectedTarget=$("savedtargets").value;$("savedtargets").innerHTML='<option value="">Choose a saved target</option>'+r.targets.map(t=>'<option value="'+esc(t.targetId)+'">'+esc(t.title)+(t.company?' / '+esc(t.company):'')+'</option>').join("");if(r.targets.some(t=>t.targetId===selectedTarget))$("savedtargets").value=selectedTarget}catch(e){if(e instanceof StaleResponse||epoch!==targetEpoch)return;say("targetmsg",e.message,1)}}
+$("refreshtargets").onclick=loadTargets;
+$("opentarget").onclick=async()=>{const epoch=++targetEpoch;try{const selected=$("savedtargets").value;if(!selected)throw new Error("Choose a saved target first.");const t=await api("GET","/targets/"+encodeURIComponent(selected));if(epoch!==targetEpoch)return;clearTargetDraft();displayTarget(t)}catch(e){if(e instanceof StaleResponse||epoch!==targetEpoch)return;say("targetmsg",e.message,1)}};
+$("savetarget").onclick=async()=>{const epoch=++targetEpoch;try{const r=await api("POST","/targets",{title:$("targettitle").value,organization:$("targetorg").value,rawText:$("targettext").value,sourceUrl:$("targeturl").value,parentTargetId:targetParent});if(epoch!==targetEpoch)return;clearTargetDraft();displayTarget(r.target);say("targetmsg","Saved immutable target version for "+r.target.title+". "+r.invalidatedDraftIds.length+" prior approval(s) cleared. Select a parsed resume, then create a source-preserving draft.");await loadTargets()}catch(e){if(e instanceof StaleResponse||epoch!==targetEpoch)return;say("targetmsg",e.message,1)}};
+$("drafttarget").onclick=async()=>{const epoch=++draftGeneration,te=targetEpoch,requested=rid,target=tid;try{if(!requested)throw new Error("Parse or reopen a resume version first.");if(!target||targetDirty)throw new Error("Save or open a pasted target version first.");const d=await api("POST","/tailor/target",{resumeId:requested,targetId:target});if(epoch!==draftGeneration||te!==targetEpoch||requested!==rid||target!==tid)return;did=d.draftId;$("dres").value=savedRes=d.tailoredResume;$("dnote").value=savedNote=d.coverNote;setStatus("draft");refresh();say("dmsg",d.coverageNote+" Human approval is required for this exact source and target version.");on("s3");await loadSavedDrafts()}catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||te!==targetEpoch)return;say("targetmsg",e.message,1)}};
 function showParsed(p,label){
   $("parsed").className="msg";
   $("parsed").innerHTML=(label?esc(label)+"<br>":"")+"<b>"+esc(p.name)+"</b><br>"+p.skills.map(s=>'<span class="chip">'+esc(s)+"</span>").join("")+(p.skills.length?"":"<p>No supported skill phrases detected. This does not mean you have no skills.</p>")+'<p class="note">'+esc((p.parseWarnings||[]).join(" "))+'</p>'+(p.skillEvidence?.length?'<details><summary>Skill source and review</summary><ul>'+p.skillEvidence.map(e=>'<li>'+esc(e.skill)+': &quot;'+esc(e.matchedText)+'&quot; ('+esc(({known_phrase:'source phrase',explicit_skill_list:'source skills list',legacy_parse:'legacy parse',user_statement:'your added statement, not extracted'})[e.source]||'source not recorded')+(e.reviewStatus==='user_confirmed'?', confirmed by you':'')+')</li>').join("")+'</ul></details>':"")+(p.uncertainSkills?.length?'<p class="note">Not counted without review: '+p.uncertainSkills.map(e=>esc(e.skill)+" ("+esc(e.reason)+")").join("; ")+"</p>":"");
@@ -355,7 +379,7 @@ async function tailor(j){const epoch=++draftGeneration;try{
   const requested=rid,generation=sourceGeneration;
   const d=await api("POST","/tailor",{resumeId:requested,jobId:j});if(epoch!==draftGeneration||generation!==sourceGeneration||requested!==rid)return; did=d.draftId;
   $("dres").value=savedRes=d.tailoredResume;$("dnote").value=savedNote=d.coverNote;setStatus("draft");refresh();
-  say("dmsg","Draft only. Skill gaps for this job: "+(d.skillGaps.join(", ")||"none")+". A person must review it before use.");on("s3");
+  displayTarget(null);say("dmsg","Draft only. Skill gaps for this job: "+(d.skillGaps.join(", ")||"none")+". A person must review it before use.");on("s3");
 }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration)return;say("dmsg",e.message,1)}}
 $("edit").onclick=async()=>{const epoch=++draftGeneration,requested=did;try{
   const generation=sourceGeneration;
