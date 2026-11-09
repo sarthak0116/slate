@@ -201,3 +201,10 @@ unbulleted unknown phrases. They remain outside parsed.skills/matching until an
 explicit user review adds them as user_statement. Consumers should not treat
 uncertainSkills as extracted competence. Existing saved parses need explicit
 reparse, not an automatic migration.
+
+## Private pasted targets (additive; fixture routes unchanged)
+- `POST /v1/targets`: `{title, organization?, rawText, sourceUrl?, parentTargetId?}`. `rawText` is preserved as supplied; source URL is display-only, never fetched. Returns immutable `target` with UUID `targetId`, `sourceKind=user_pasted_not_verified`, raw-text SHA-256 and `invalidatedDraftIds`. Revising a target creates a new version and clears approvals for its ancestor target versions. The old snapshots remain unchanged and may be explicitly reviewed again.
+- `GET /v1/targets`, `GET /v1/targets/{targetId}`: only the authenticated user's saved targets. These are not feed results or verified employer listings.
+- `POST /v1/tailor/target`: `{resumeId,targetId}`. Returns an unapproved `source_preserving_draft_not_rewrite` bound to the exact saved resume version, original-source SHA-256 and target snapshot. Job requirements stay target context, never applicant evidence. Original source is retained literally, including details the parser does not structure. This mode is not a formatted full CV or a generative rewrite.
+- Existing edit, approval and download routes apply. Original-source block changes are rejected in this mode; reparse edited original text to make a new resume version. Appended notes and the cover note keep ordinary claim checks. Every successful draft edit creates a new unapproved version; source skill review and target revision clear ancestor approvals. Export rechecks the saved version, hashes and target binding, then labels pasted target context separately from applicant source.
+- Known-phrase checks do not verify facts, job validity, all requirements, licenses, employers, or semantic truth. Unknown requirements remain visible in raw target text, with no fit score. No application is sent. AI tailoring remains the existing fixture-only opt-in path.
