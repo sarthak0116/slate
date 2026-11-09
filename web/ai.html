@@ -2,29 +2,107 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Slate - AI draft (opt-in)</title>
 <style>
-:root{--navy:#14213d;--blue:#2457c5;--line:#e3e7ee;--mut:#5b6678;--bad:#b3261e;--warn:#8a5a00}
-*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;color:var(--navy);background:#fff}
-main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
-h1{font-size:28px;margin:0}h1 span{color:var(--blue)}p.sub{color:var(--mut);margin:4px 0 24px}
-section{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
+:root{--navy:#14213d;--blue:#2457c5;--blue-soft:#eef2fb;--ink:#1c2433;--mut:#5b6678;--line:#e3e7ee;--soft:#f6f8fc;--bad:#b3261e;--warn:#8a5a00;--ok:#2457c5;--good:#176b42}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--soft)}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.layout{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh;align-content:start}
+.side{background:#fff;border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;display:flex;flex-direction:column;gap:22px}
+.brand{font-size:20px;font-weight:700;color:var(--navy);letter-spacing:-.02em;padding:0 10px}
+.brand:hover{text-decoration:none}
+.brand span{color:var(--blue)}
+.sidegroup{display:flex;flex-direction:column;gap:2px}
+.sidetitle{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 10px 6px;font-weight:600}
+.slink{display:block;padding:7px 10px;border-radius:8px;color:var(--ink);font-size:14px}
+.slink:hover{background:var(--soft);text-decoration:none}
+.slink.active{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.slink.sub{color:var(--mut);font-size:13.5px}
+.sidefoot{margin-top:auto;font-size:12px;color:var(--mut);border-top:1px solid var(--line);padding:12px 10px 0}
+.content{padding:28px 36px 64px;max-width:980px;width:100%;margin:0 auto}
+.pagehead{margin:2px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.pagehead h1{font-size:24px;margin:0;color:var(--navy);letter-spacing:-.02em}
+.pagehead h1 span{color:var(--blue)}
+.pagehead h1 .hsub{font-size:14px;color:var(--mut);font-weight:500;letter-spacing:0}
+.flowline{font-size:13px;color:var(--mut);margin:8px 0 0}
+.flowline b{color:var(--navy);font-weight:600}
+p.sub{color:var(--mut);margin:6px 0 0;font-size:14px;max-width:74ch}
+section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:0 0 12px}
 section.off{opacity:.45;pointer-events:none}
-h2{font-size:17px;margin:0 0 10px}h2 b{display:inline-block;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;text-align:center;font-size:13px;line-height:24px;margin-right:8px}
-textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:10px;font:14px/1.4 ui-monospace,monospace;color:var(--navy)}
-select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;color:var(--navy)}
-button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer;margin:8px 8px 0 0}
-button.sec{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+h2{font-size:15px;margin:0 0 12px;color:var(--navy);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2 b{flex:none;display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;text-align:center;font-size:12px;line-height:22px;font-weight:600}
+h3{font-size:14px;color:var(--navy)}
+textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);background:#fff;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff;max-width:100%}
+input[type=text],input[type=email],input:not([type]){font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
+label{font-size:13px;font-weight:600;color:var(--navy);display:block;margin:12px 0 4px}
+.draftgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.draftgrid label:first-child{margin-top:0}
+button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;margin:8px 8px 0 0}
+button:hover{background:#1d2f55}
+button.sec{background:#fff;color:var(--navy);border:1px solid var(--line)}
+button.sec:hover{border-color:var(--navy);background:var(--soft)}
 button:disabled{opacity:.35;cursor:not-allowed}
-.warn{background:#fdf6e8;border:1px solid var(--warn);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px;color:var(--warn)}
+.toolrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px}
+.toolrow button{margin:0}
+.toolrow select{flex:1 1 220px;min-width:0}
+.note{color:var(--mut);font-size:13px;margin:6px 0 8px}
+.msg{margin-top:8px;font-size:14px}
+.upl{font-size:13px;color:var(--mut)}
+input[type=file]{max-width:230px;font-size:12.5px}
+.bad{color:var(--bad)}
+.ok{color:var(--ok)}
+.dirty{color:var(--bad)}
+.chip{display:inline-block;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:2px 10px;margin:2px 4px 2px 0;font-size:13px}
+.job{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;border-top:1px solid var(--line);padding:12px 0}
+.job>div:first-child{flex:1 1 220px;min-width:0}
+.job>div:last-child{display:flex;align-items:center;gap:10px;margin-left:auto}
+.job button{margin:0}
+.job:first-of-type{border-top:0}
+.job small{color:var(--mut)}
+.score{font-weight:600;color:var(--blue)}
+.tag{display:inline-block;border:1px solid var(--mut);color:var(--mut);border-radius:6px;padding:0 8px;font-size:12px;font-weight:500}
+.tag.approved{border-color:var(--navy);color:#fff;background:var(--navy)}
+.tag.rejected{border-color:var(--bad);color:var(--bad)}
+li{margin:4px 0}
+.q{background:var(--soft);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.warn{background:#fdf6e8;border:1px solid #ecd9ac;border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13.5px;color:var(--warn)}
 .warn li{margin:2px 0}
-.msg{margin-top:8px;font-size:14px}.bad{color:var(--bad)}.ok{color:var(--blue)}
-.tag{display:inline-block;border:1px solid var(--mut);color:var(--mut);border-radius:6px;padding:0 8px;font-size:13px}
-.tag.approved{border-color:var(--navy);color:#fff;background:var(--navy)}.tag.rejected{border-color:var(--bad);color:var(--bad)}
-.cite{color:var(--mut);font-size:12px}pre b{font-weight:600}
-pre{white-space:pre-wrap;background:#f5f7fb;border-radius:8px;padding:10px 12px;font:13px/1.5 ui-monospace,monospace}
-.banner{border:1px solid var(--blue);background:#eef2fb;border-radius:12px;padding:12px 14px;margin:0 0 16px;font-size:14px}
-</style></head><body><main>
-<h1>Slate<span>.</span> <small style="font-size:15px;color:var(--mut)">AI draft (opt-in demo)</small></h1>
+.cite{color:var(--mut);font-size:12px}
+pre{white-space:pre-wrap;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13px/1.5 ui-monospace,Menlo,monospace;margin:6px 0}
+pre b{font-weight:600}
+.banner{border:1px solid #cfdbf5;border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;color:var(--ink)}
+code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}
+.pagefoot{margin-top:24px;color:var(--mut);font-size:12.5px}
+@media(max-width:820px){
+.layout{grid-template-columns:1fr}
+.side{position:static;max-height:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px;border-right:0;border-bottom:1px solid var(--line)}
+.sidegroup{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px}
+.sidegroup.onpage,.sidetitle,.sidefoot{display:none}
+.content{padding:18px 14px 56px}
+.draftgrid{grid-template-columns:1fr}
+}
+</style></head>
+<body>
+<div class="layout">
+<aside class="side">
+<a class="brand" href="/">Slate<span>.</span></a>
+<div class="sidegroup">
+<div class="sidetitle">Workspace</div>
+<a class="slink" href="/">Resume</a>
+<a class="slink active" href="/ai">AI draft</a>
+<a class="slink" href="/interview">Mock interview</a>
+</div>
+
+<div class="sidefoot">Local demo - sample data only, runs on this machine.</div>
+</aside>
+<div class="content">
+<header class="pagehead">
+<h1>AI draft <span class="hsub">(opt-in demo)</span></h1>
 <p class="sub">This page calls the real LLM through <code>POST /v1/tailor/ai</code>. It only works when the server was started with a key. Sample data only.</p>
+</header>
 
 <div class="banner"><b>Human review is required.</b> The LLM only sees numbered blocks from the uploaded resume and the job, and every draft line must cite its sources like <span class="cite">[S2]</span>. The server re-checks this mechanically at approval and export: uncited lines, unknown citations, invented numbers or names, and lines whose wording leaves the cited sources all block approval. It is still not a fact check - a cited line can still twist a source's meaning, and qualifier inflation ("advanced Excel") can slip through. Review by eye.</div>
 
@@ -51,9 +129,11 @@ Skills: Python, Git, Excel, communication</textarea>
 <pre id="dres"></pre>
 <h3 style="font-size:14px;margin:10px 0 4px">Cover note</h3>
 <pre id="dnote"></pre>
-<div><button id="approve">Approve (human decision)</button><button id="reject" class="sec">Reject</button></div>
+<div class="toolrow"><button id="approve">Approve (human decision)</button><button id="reject" class="sec">Reject</button></div>
 <div id="decision" class="msg"></div></section>
-
+<div class="pagefoot">Slate demo build.</div>
+</div>
+</div>
 <script>
 let resumeId=null, draftId=null, sourceGeneration=0, sourceRequest=0, draftGeneration=0;
 class StaleResponse extends Error {}
