@@ -66,9 +66,9 @@ function resetAccountState(){
 }
 // Small safe renderer: escape first, then map light Markdown to HTML so model
 // output never shows raw ** or ## and can never inject markup.
+function escapeHTML(t){return String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 function mdRender(t){
-  const esc=(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  return esc.split(/\n/).map(l=>{
+  return escapeHTML(t).split(/\n/).map(l=>{
     let h=l.replace(/^#{1,4}\s*/,"").trim();
     h=h.replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\*([^*]+)\*/g,"<i>$1</i>");
     h=h.replace(/\[(S\d+|J)\]/g,'<span class="cite">[$1]</span>');
@@ -92,7 +92,7 @@ async function api(path, method, body){
 }
 function showLogin(note){
   document.getElementById("loginbox").style.display="";
-  if(note) document.getElementById("loginmsg").innerHTML='<span class="bad">'+note+"</span>";
+  if(note) document.getElementById("loginmsg").innerHTML='<span class="bad">'+escapeHTML(note)+"</span>";
 }
 let authRecovery=null;
 async function recoverSignIn(){
@@ -168,9 +168,9 @@ document.getElementById("parse").onclick=async()=>{
     msg.textContent="Detected skill phrases: "+(r.parsed.skills.join(", ")||"none found; this does not mean you have no skills")+". "+(r.parsed.parseWarnings||[]).join(" ")+" Not counted without review: "+(r.parsed.uncertainSkills||[]).map(e=>e.skill).join(", ")+". Job choices below are five analyst/tech fixtures, not inferred career targets; retail/customer-service roles are not covered.";
     const j=await api("/jobs","GET");
     const sel=document.getElementById("job");
-    sel.innerHTML=j.jobs.map(x=>`<option value="${x.jobId}">${x.title} at ${x.company}</option>`).join("");
+    sel.replaceChildren(...j.jobs.map(x=>new Option(x.title+" at "+x.company,x.jobId)));
     document.getElementById("s2").classList.remove("off");
-  }catch(e){if(e instanceof StaleResponse)return;msg.innerHTML='<span class="bad">'+e.message+"</span>"}
+  }catch(e){if(e instanceof StaleResponse)return;msg.innerHTML='<span class="bad">'+escapeHTML(e.message)+"</span>"}
 };
 document.getElementById("gen").onclick=async()=>{
   const epoch=++draftGeneration;
@@ -181,17 +181,17 @@ document.getElementById("gen").onclick=async()=>{
     document.getElementById("status").textContent="draft";
     document.getElementById("status").className="tag draft";
     document.getElementById("decision").textContent="";
-    msg.innerHTML='AI draft '+draftId+' created (requiresApproval: '+d.requiresApproval+')';
+    msg.innerHTML='AI draft '+escapeHTML(draftId)+' created (requiresApproval: '+escapeHTML(d.requiresApproval)+')';
     document.getElementById("dres").innerHTML=mdRender(d.tailoredResume);
     document.getElementById("dnote").innerHTML=mdRender(d.coverNote);
     const f=[];
     if(d.flaggedClaims&&d.flaggedClaims.length)f.push("Skills the resume does not list: "+d.flaggedClaims.join(", "));
     (d.violations||[]).forEach(v=>f.push(v));
     document.getElementById("flags").innerHTML=f.length
-      ?'<div class="warn"><b>Claim rule warnings - check these before approving:</b><ul>'+f.map(x=>"<li>"+x+"</li>").join("")+"</ul></div>"
+      ?'<div class="warn"><b>Claim rule warnings - check these before approving:</b><ul>'+f.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></div>"
       :'<div class="msg ok">No rule-detectable unsupported claim. That is not a fact check - still review by eye.</div>';
     document.getElementById("s3").classList.remove("off");
-  }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration)return;msg.innerHTML='<span class="bad">'+e.message+"</span>"}
+  }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration)return;msg.innerHTML='<span class="bad">'+escapeHTML(e.message)+"</span>"}
 };
 async function decide(what){
   const epoch=draftGeneration,requested=draftId;
@@ -201,8 +201,8 @@ async function decide(what){
     if(epoch!==draftGeneration||requested!==draftId)return;
     document.getElementById("status").textContent=r.status;
     document.getElementById("status").className="tag "+r.status;
-    el.innerHTML='Decision stored: '+r.status;
-  }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||requested!==draftId)return;el.innerHTML='<span class="bad">'+e.message+"</span>"}
+    el.textContent='Decision stored: '+r.status;
+  }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||requested!==draftId)return;el.innerHTML='<span class="bad">'+escapeHTML(e.message)+"</span>"}
 }
 document.getElementById("approve").onclick=()=>decide("approve");
 document.getElementById("reject").onclick=()=>decide("reject");
