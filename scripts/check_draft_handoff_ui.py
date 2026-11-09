@@ -10,19 +10,19 @@ with tempfile.TemporaryDirectory() as d:
    try:urllib.request.urlopen('http://127.0.0.1:8017/v1/config');break
    except Exception:time.sleep(.1)
   with sync_playwright() as pw:
-   b=pw.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/google-chrome'),args=['--no-sandbox']);page=b.new_page(viewport={'width':1100,'height':1100});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   b=pw.chromium.launch(executable_path=os.environ.get('CHROME_PATH','/usr/bin/google-chrome'),args=['--no-sandbox']);page=b.new_page(viewport={'width':1100,'height':1100});page.on('dialog',lambda d:d.accept());errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    page.goto('http://127.0.0.1:8017/');page.locator('#devmail').fill('fixture@example.com');page.locator('#devgo').click()
    import json
    import json
    page.locator('#resume').fill('Alex Example\nSkills: Python, SQL, Excel, communication')
    page.locator('#parse').click();page.wait_for_function('document.querySelector("#parsed").textContent.includes("Alex Example")')
-   page.get_by_role('button',name='Tailor',exact=True).first.click()
+   page.evaluate('routePage("comparisons")');page.get_by_role('button',name='Tailor',exact=True).first.click()
    page.wait_for_function('document.querySelector("#dres").value.length>0')
    old=page.evaluate('did')
    exact_res=page.locator('#dres').input_value();exact_note=page.locator('#dnote').input_value()
    page.locator('#approve').click();page.wait_for_function('document.querySelector("#status").textContent==="approved"')
    page.reload();page.wait_for_function('document.querySelector("#saveddrafts").options.length>1')
-   page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click()
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click()
    page.wait_for_function('did!==null')
    assert page.locator('#status').inner_text()=='approved'
    assert page.locator('#dres').input_value()==exact_res and page.locator('#dnote').input_value()==exact_note
@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as d:
    assert page.request.get('http://127.0.0.1:8017/v1/drafts/'+old+'/download',headers={'Authorization':'Bearer dev:fixture@example.com'}).status==403
    assert page.request.get('http://127.0.0.1:8017/v1/drafts/'+current+'/download',headers={'Authorization':'Bearer dev:fixture@example.com'}).status==403
    page.reload();page.wait_for_function('document.querySelector("#saveddrafts").options.length>1')
-   page.locator('#saveddrafts').select_option(current);page.locator('#opendraft').click();page.wait_for_function('did!==null')
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(current);page.locator('#opendraft').click();page.wait_for_function('did!==null')
    assert page.locator('#status').inner_text()=='draft'
    assert page.locator('#dnote').input_value()==exact_note+' Edited version.'
    # A download started before further typing must not hand off a version
@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory() as d:
    page.unroute('**/v1/drafts/'+current+'/download')
    # Late opened draft from the prior account must not populate another login.
    held=[];page.route('**/v1/drafts/'+old,lambda route:held.append(route))
-   page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click();page.wait_for_timeout(50)
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click();page.wait_for_timeout(50)
    assert held
    page.evaluate('recoverSignIn()');page.locator('#devmail').fill('other@example.com');page.locator('#devgo').click()
    held[0].fulfill(status=200,content_type='application/json',body=json.dumps({'draftId':old,'private':'OLD PRIVATE'}))

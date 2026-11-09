@@ -259,6 +259,11 @@ def _shell(r: APIRouter) -> FastAPI:
     web_ai = os.path.join(web_root, "ai.html")
     web_interview = os.path.join(web_root, "interview.html")
 
+    @app.get("/resume", include_in_schema=False)
+    @app.get("/targets", include_in_schema=False)
+    @app.get("/draft", include_in_schema=False)
+    @app.get("/comparisons", include_in_schema=False)
+    @app.get("/roadmap", include_in_schema=False)
     @app.get("/", include_in_schema=False)
     def home():
         return FileResponse(web) if os.path.exists(web) else JSONResponse({"message": "Slate API"})
