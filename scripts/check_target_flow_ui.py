@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as tmp:
    def source(p):
     p.evaluate('routePage("resume")');p.locator('#resume').fill(SOURCE);p.locator('#parse').click();p.wait_for_function('rid!==null')
    def target(p):
-    p.evaluate('routePage("targets")');p.locator('#targettitle').fill('Staff nurse');p.locator('#targetorg').fill('Pasted hospital name');p.locator('#targettext').fill(RAW);p.locator('#savetarget').click();p.wait_for_function('tid!==null')
+    p.evaluate('routePage("targets")');p.locator('#targettitle').fill('Staff nurse');p.locator('#target-metadata > summary').click();p.locator('#targetorg').fill('Pasted hospital name');p.locator('#targettext').fill(RAW);p.locator('#savetarget').click();p.wait_for_function('tid!==null')
    for width in (1440,390):
     p=page(width);source(p);target(p);old=p.evaluate('tid');p.locator('#drafttarget').click();p.wait_for_function('did!==null');did=p.evaluate('did');assert SOURCE in p.locator('#dres').input_value();assert RAW not in p.locator('#dres').input_value()
     p.locator('#approve').click();p.wait_for_function('document.querySelector("#status").textContent==="approved"')
@@ -33,9 +33,9 @@ with tempfile.TemporaryDirectory() as tmp:
     p.locator('#savetarget').click();p.wait_for_function('tid!==null');assert p.evaluate('tid')!=old
     status=p.evaluate('(async()=>await api("GET","/drafts/'+did+'"))()')['status'];assert status=='draft'
     # Historical draft reopens its bound target, never the newly typed target.
-    p.evaluate('routePage("draft")');p.locator('#refreshdrafts').click();p.wait_for_function('Array.from(document.querySelector("#saveddrafts").options).length>1');p.locator('#saveddrafts').select_option(did);p.locator('#opendraft').click();p.wait_for_function('did==='+json.dumps(did));assert p.locator('#targettext').input_value()==RAW;assert p.evaluate('tid')==old
+    p.evaluate('routePage("draft")');p.locator('#draft-library > summary').click();p.locator('#refreshdrafts').click();p.wait_for_function('Array.from(document.querySelector("#saveddrafts").options).length>1');p.locator('#saveddrafts').select_option(did);p.locator('#opendraft').click();p.wait_for_function('did==='+json.dumps(did));assert p.locator('#targettext').input_value()==RAW;assert p.evaluate('tid')==old
     p.locator('#dres').fill(p.locator('#dres').input_value().replace('City Hospital','Invented Employer'));p.locator('#edit').click();p.wait_for_function('document.querySelector("#dmsg").textContent.includes("preserved original source block")');assert p.locator('#export').is_disabled()
-    p.reload();p.wait_for_function('document.body.textContent.includes("Signed in as")');p.evaluate('routePage("targets")');p.locator('#refreshtargets').click();p.wait_for_function('document.querySelector("#savedtargets").options.length>1');p.close()
+    p.reload();p.wait_for_function('document.body.textContent.includes("Signed in as")');p.evaluate('routePage("targets")');p.locator('#target-library > summary').click();p.locator('#refreshtargets').click();p.wait_for_function('document.querySelector("#savedtargets").options.length>1');p.close()
    # Late target save/open/generate replies after account switch are discarded.
    for action in ('save','open','draft'):
     for status in (200,401,500):
@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory() as tmp:
      pattern={'save':'**/v1/targets','open':'**/v1/targets/'+target_id,'draft':'**/v1/tailor/target'}[action]
      p.evaluate('routePage("targets")');p.route(pattern,lambda r:r.continue_() if action=='save' and r.request.method=='GET' else delayed.append(r))
      if action=='save':p.locator('#savetarget').click()
-     elif action=='open':p.locator('#savedtargets').select_option(target_id);p.locator('#opentarget').click()
+     elif action=='open':p.locator('#target-library > summary').click();p.locator('#savedtargets').select_option(target_id);p.locator('#opentarget').click()
      else:p.locator('#drafttarget').click()
      p.wait_for_timeout(50);assert delayed,action
      # Trigger real sign-in recovery rather than a page reload that would abort the request.
