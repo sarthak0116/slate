@@ -156,7 +156,7 @@ Skills: Python, Git, Excel, communication</textarea>
 <button id="road">Build roadmap for Data Analyst</button><ul id="roadlist"></ul></section>
 
 <section id="s5" class="off"><h2><b>5</b>Mock interview</h2>
-<button id="start">Start session</button><div id="iv"></div></section>
+<p class="note">Choose your role and saved resume in the interview workspace. It includes explicit finish and feedback controls.</p><button id="start">Open interview practice</button><div id="iv"></div></section>
 <div class="pagefoot">Slate demo build.</div>
 </div>
 </div>
@@ -380,11 +380,5 @@ $("export").onclick=async()=>{const epoch=draftGeneration,requested=did,generati
 const resLink=x=>{const i=x.lastIndexOf(" - http");if(i<0)return esc(x);const u=x.slice(i+3);return /^https:\/\//.test(u)?`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(x.slice(0,i))}</a>`:esc(x)};
 $("road").onclick=async()=>{try{const generation=sourceGeneration;const r=await api("POST","/roadmap",{resumeId:rid,targetRole:"Data Analyst"});
   if(generation!==sourceGeneration)return;$("roadlist").innerHTML=r.milestones.map(m=>`<li><b>${esc(m.title)}</b> · ${m.etaWeeks} wk<br><small>${esc(m.why)}</small><br><small>${m.resources.map(resLink).join(" · ")}</small></li>`).join("")}catch(e){if(e instanceof StaleResponse)return;$("roadlist").innerHTML='<li class="bad">'+esc(e.message)+"</li>"}};
-let qs=0;
-function showQ(t){$("iv").innerHTML=`<div class="q">${esc(t)}</div><textarea id="ans" style="min-height:70px"></textarea><button id="send">Answer</button><div id="fb" class="msg"></div>`;$("send").onclick=answer}
-$("start").onclick=async()=>{try{const r=await api("POST","/interview/mock",{targetRole:"Data Analyst"});sid=r.sessionId;showQ(r.firstQuestion);
-  if(r.carriedFromEarlier.length)$("iv").insertAdjacentHTML("afterbegin",'<p class="msg">Carried over from earlier sessions: '+esc(r.carriedFromEarlier.join("; "))+"</p>")}catch(e){if(e instanceof StaleResponse)return;$("iv").textContent=e.message}};
-async function answer(){try{const r=await api("POST","/interview/"+sid+"/answer",{text:$("ans").value});
-  if(r.done){const f=await api("GET","/interview/"+sid+"/feedback");$("iv").innerHTML="<p><b>"+esc(f.summary)+"</b></p>"+(f.weakAreas.length?"<p>Weak areas:</p><ul>"+f.weakAreas.map(w=>"<li>"+esc(w)+"</li>").join("")+"</ul>":"")}
-  else showQ(r.nextQuestion)}catch(e){if(e instanceof StaleResponse)return;$("fb").textContent=e.message}}
+$("start").onclick=()=>{location.href="/interview"};
 </script></body></html>
