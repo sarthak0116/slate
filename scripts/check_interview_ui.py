@@ -54,12 +54,14 @@ with tempfile.TemporaryDirectory() as tmp:
    print('denied complete',flush=True)
    # Late media permission is closed after sign out, never attached to the next account.
    for kind in ('audio','video'):
-    p=page();p.evaluate('()=>{window.mediaResolve=null;window.stopped=false;navigator.mediaDevices.getUserMedia=()=>new Promise(r=>window.mediaResolve=r)}')
+    p=page();p.evaluate('()=>{window.mediaResolve=null;window.stopped=false;window.mediaRequests=0;navigator.mediaDevices.getUserMedia=()=>{window.mediaRequests++;return new Promise(r=>window.mediaResolve=r)}}')
     if kind=='audio':p.locator('#mode').select_option('voice')
     p.locator('#start').click();p.locator('#session').wait_for(state='visible')
-    if kind=='video':p.locator('#cameraToggle').click()
+    if kind=='video':
+     p.locator('#cameraToggle').click();p.evaluate('()=>{void toggleCamera()}');assert p.evaluate('window.mediaRequests')==1
     p.wait_for_function('window.mediaResolve!==null');p.locator('#signout').click();p.locator('#devEmail').fill('second@example.com');p.locator('#devSignIn').click()
     p.evaluate('window.mediaResolve({getTracks:()=>[{stop:()=>window.stopped=true}]})');p.wait_for_function('window.stopped');assert p.evaluate('audioStream===null&&cameraStream===null');p.close()
+   p=page();p.evaluate('()=>{window.doneCount=0;Object.defineProperty(window,"speechSynthesis",{value:{cancel:()=>{},speak:u=>window.lastUtterance=u},configurable:true});speak("Synthetic prompt",()=>window.doneCount++);window.lastUtterance.onend();window.lastUtterance.onerror()}');assert p.evaluate('window.doneCount')==1;p.close()
    assert not errors,errors
    browser.close();print('Interview typed/adaptive/end/report retry, 12 stale response cases, active401, denied/unsupported device and 2 late permission cleanup cases passed.')
  finally:proc.terminate();proc.wait(timeout=5)
