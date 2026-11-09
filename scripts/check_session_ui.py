@@ -184,6 +184,7 @@ with tempfile.TemporaryDirectory() as tmp:
                     page.wait_for_function('rid!==null' if path=='/' else 'resumeId!==null')
                     if path=='/':assert 'Blake Example' in page.locator('#parsed').inner_text()
                     page.close()
+            print("4 source-input context cases passed")
             # Loading an externally supplied fragment must never create/approve
             # anything, even in an already signed-in browser.
             for fragment in ('demo', 'demo-approve', 'demo-reject'):
@@ -198,7 +199,6 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.wait_for_timeout(200)
                 assert not writes, writes
                 page.close()
-            print("4 source-input context cases passed")
             browser.close()
         print('8 account-switch + 4 same-source draft + 1 PDF source + 3 URL-fragment cases passed; server stopped')
     finally:
