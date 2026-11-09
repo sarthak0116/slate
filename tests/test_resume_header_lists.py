@@ -70,3 +70,9 @@ def test_known_positive_skill_remains_counted_alongside_review_candidates():
 def test_plain_candidates_bounded():
     p=parse_resume('Alex Example\nSkills\n'+'\n'.join('custom skill '+str(i) for i in range(90)))
     assert len(p['uncertainSkills'])==64
+
+
+@pytest.mark.parametrize('heading',['Compétences','कौशल','技能','Formation','शिक्षा','教育','Expérience','अनुभव','工作经历'])
+def test_supported_non_latin_or_localized_section_is_not_name_after_title(heading):
+    p=parse_resume('CV\n'+heading+'\nCommunity support service')
+    assert p['name']=='Unknown' and p['nameEvidence']['status']=='not_recognized'
