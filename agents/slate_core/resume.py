@@ -55,10 +55,15 @@ def qualification_lines(text):
         if label.startswith("user-provided skill statements"):
             excluded_section = True
             continue
-        if label in {"career objective", "objective", "career goals", "learning goals", "job requirements", "required qualifications", "example", "example experience", "instructions", "tips"}:
+        # Explicit non-history sections can contain degree words and job titles
+        # without describing the candidate's qualifications or employment.
+        section_label = re.split(r"[:：]", label, maxsplit=1)[0].strip()
+        if section_label in {"career objective", "objective", "career goals", "learning goals", "job requirements", "required qualifications", "example", "example experience", "instructions", "tips",
+                             "skills", "key skills", "technical skills", "competencies", "core competencies", "compétences", "habilidades", "fähigkeiten", "कौशल", "技能",
+                             "projects", "personal projects", "academic projects", "references", "referees", "interests", "hobbies", "interests/hobbies"}:
             excluded_section = True
             continue
-        if label in {"education", "qualifications", "academic background", "experience", "work experience", "employment", "employment history", "professional experience", "skills", "key skills", "technical skills", "projects"}:
+        if label in {"education", "qualifications", "academic background", "experience", "work experience", "employment", "employment history", "professional experience", "formation", "educación", "ausbildung", "शिक्षा", "教育", "expérience", "experiencia", "berufserfahrung", "अनुभव", "工作经历"}:
             excluded_section = False
             continue
         # A literal degree/job-title mention is not necessarily a qualification.
