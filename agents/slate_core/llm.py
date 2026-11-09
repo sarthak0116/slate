@@ -1,12 +1,7 @@
-"""Optional LLM adapter for tailoring and interview feedback.
+"""Server-side LLM adapters for Gemini interview coaching and Groq tailoring.
 
-Not wired into tailor.py or interview.py yet: those stay deterministic by default.
-Nothing here runs without a server-side key in the LLM_API_KEY env var; no key is
-ever read from or written to the client, and tests use MockLLM only.
-
-Swap points (documented in slate_core README): tailor.build_draft text generation
-and interview question/feedback generation can take an LLMClient later without
-changing the API contract shapes.
+Gemini interview coaching uses GEMINI_API_KEY; Groq tailoring uses LLM_API_KEY.
+Neither key is read from or written to the client. Tests can inject MockLLM.
 """
 import json
 import os
@@ -40,11 +35,12 @@ class MockLLM(LLMClient):
 
 
 class GeminiLLM(LLMClient):
-    """Gemini Developer API over stdlib urllib. Key comes from LLM_API_KEY."""
+    """Gemini Developer API over stdlib urllib. Key comes only from GEMINI_API_KEY."""
 
-    def __init__(self, model: str = DEFAULT_MODEL, api_key: str = None, timeout: int = 30):
-        self.model = model
-        self.api_key = api_key if api_key is not None else os.environ.get("LLM_API_KEY", "")
+    def __init__(self, model: str = None, api_key: str = None, timeout: int = 30):
+        self.model = model or os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
+        self.api_key = (api_key if api_key is not None else
+                        os.environ.get("GEMINI_API_KEY", ""))
         self.timeout = timeout
 
     def _request_body(self, prompt: str) -> bytes:
@@ -52,7 +48,7 @@ class GeminiLLM(LLMClient):
 
     def generate(self, prompt: str) -> str:
         if not self.api_key:
-            raise LLMError("LLM_API_KEY is not set on the server.")
+            raise LLMError("GEMINI_API_KEY is not set on the server.")
         req = urllib.request.Request(
             API_BASE.format(model=self.model),
             data=self._request_body(prompt),
@@ -63,7 +59,17 @@ class GeminiLLM(LLMClient):
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 data = json.loads(resp.read().decode())
         except Exception as e:
-            raise LLMError(f"LLM request failed: {e}")
+            # Keep HTTP status and provider diagnostics; never include request headers or secrets.
+            detail = ""
+            if hasattr(e, "read"):
+                try:
+                    payload = json.loads(e.read().decode("utf-8", errors="replace"))
+                    detail = str(payload.get("error", {}).get("message", ""))[:500]
+                except Exception:
+                    pass
+            status = getattr(e, "code", None)
+            suffix = f" (HTTP {status})" if status else ""
+            raise LLMError(f"Gemini request failed{suffix}: {detail or str(e)[:300]}") from None
         try:
             return data["candidates"][0]["content"]["parts"][0]["text"]
         except (KeyError, IndexError, TypeError):

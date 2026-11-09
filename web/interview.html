@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slate · Mock Interview</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#14213d;background:#f6f8fc}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:900px;margin:0 auto;padding:28px 18px 64px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}
+h1{font-size:26px;margin:0}h1 span{color:#2457c5}.muted{color:#5b6678}
+.panel{background:white;border:1px solid #e1e6ef;border-radius:14px;padding:20px;margin:14px 0}
+label{display:block;font-weight:600;margin:10px 0 5px}input,select,textarea{font:inherit;width:100%;border:1px solid #d5dce8;border-radius:8px;padding:10px;color:#14213d;background:white}
+textarea{min-height:130px;resize:vertical}button{border:0;border-radius:8px;background:#14213d;color:white;padding:10px 15px;font:inherit;cursor:pointer;margin:8px 8px 0 0}
+button.secondary{background:white;color:#14213d;border:1px solid #14213d}button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.status{font-size:14px;margin-top:10px}.error{color:#b3261e}.good{color:#176b42}
+.question{font-size:19px;line-height:1.5;background:#f2f5fb;border-radius:10px;padding:18px;margin:12px 0}
+.pill{display:inline-block;border-radius:20px;background:#edf2ff;color:#2457c5;padding:4px 10px;font-size:13px}
+.hidden{display:none!important}.review{border-top:1px solid #e5e9f0;padding:12px 0}.score{font-weight:700;color:#2457c5}
+.camera-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+video{width:100%;max-height:280px;object-fit:cover;background:#101828;border-radius:10px;transform:scaleX(-1)}
+.camera-note{font-size:13px;color:#5b6678}
+button.danger{background:#a4262c}
+@media(max-width:650px){.camera-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.row{grid-template-columns:1fr}.wrap{padding:18px 12px}}
+</style></head>
+<body><main class="wrap">
+<header><div><h1>Slate<span>.</span> Mock Interview</h1><div class="muted">Adaptive practice grounded in your resume and target role</div></div><a href="/" class="muted">Back to Slate</a></header>
+<section class="panel" id="authPanel"><b>Sign in</b><div id="authControls" class="status">Checking sign-in configuration…</div><div id="authMessage" class="status"></div></section>
+<section class="panel" id="setup">
+<h2>Interview setup</h2><p class="muted">Choose a role, optionally attach one of your saved resume versions, and select how you want to answer.</p>
+<div class="row"><div><label for="role">Target role</label><input id="role" value="Data Analyst" maxlength="120"></div>
+<div><label for="resume">Resume context</label><select id="resume"><option value="">No resume context</option></select></div></div>
+<label for="mode">Interview mode</label><select id="mode"><option value="text">Text interview</option><option value="voice">Voice interview (browser speech recognition)</option></select>
+<p class="muted">Voice recognition availability depends on your browser and microphone permissions. If unavailable, you can still type answers.</p>
+<button id="start">Start interview</button><button class="secondary" id="refreshResumes">Refresh saved resumes</button>
+<div id="setupStatus" class="status"></div></section>
+<section class="panel hidden" id="session">
+<div class="row"><div><span class="pill" id="progress">Question 1</span></div><div style="text-align:right"><span class="pill" id="coachMode">Coach</span></div></div>
+<div class="question" id="question"></div>
+<div id="liveReview" class="status muted"></div>
+<div class="camera-grid">
+ <div><b>Camera</b><video id="cameraPreview" autoplay muted playsinline></video>
+  <button id="cameraToggle" class="secondary">Enable camera</button><div id="cameraStatus" class="camera-note">Camera is off. Enable it if you want a self-preview.</div>
+ </div>
+ <div><b>Delivery assessment</b><div class="camera-note">In voice mode, Slate records each answer locally to measure speaking pace, pauses, filler words and volume variation. Raw audio is not uploaded or retained.</div>
+  <div id="audioStatus" class="camera-note">Microphone capture starts with each voice answer.</div>
+ </div>
+</div>
+<label for="answer">Your answer</label><textarea id="answer" placeholder="Structure your answer clearly. Include your reasoning and a concrete example where relevant."></textarea>
+<div><button id="mic" class="secondary">Start dictation</button><button id="stopMic" class="secondary" disabled>Stop dictation</button><button id="submit">Submit answer</button><button id="endInterview" class="danger">End interview</button></div>
+<div id="sessionStatus" class="status"></div>
+</section>
+<section class="panel hidden" id="results"><h2>Interview feedback</h2><div id="summary"></div><div id="details"></div><button id="again">Start another interview</button></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let sid=null, token=()=>sessionStorage.getItem("slate_token")||"", recognition=null, listening=false, answerPrefix="";
+let cameraStream=null,audioStream=null,recorder=null,audioChunks=[],cameraOn=false;
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function msg(id,text,error=false){$(id).textContent=text;$(id).className="status "+(error?"error":"")}
+async function api(path,method="GET",body){
+ const headers={};if(token())headers.Authorization="Bearer "+token();if(body!==undefined)headers["Content-Type"]="application/json";
+ let response;try{response=await fetch("/v1"+path,{method,headers,body:body!==undefined?JSON.stringify(body):undefined})}
+ catch(e){throw new Error("Cannot reach Slate API. Open this page from http://127.0.0.1:8000/interview, not as a local file.")}
+ const raw=await response.text();let data={};
+ if(raw){try{data=JSON.parse(raw)}catch(e){
+  const detail=raw.replace(/\\s+/g," ").trim().slice(0,280);
+  throw new Error("Slate API returned a non-JSON response (HTTP "+response.status+"): "+detail+" Check the Uvicorn terminal for the server traceback.");
+ }}
+ if(!response.ok)throw new Error(data.error?.message||data.detail||"Request failed ("+response.status+")");
+ return data;
+}
+function signedIn(email){$("authControls").innerHTML="Signed in as "+esc(email||"local user")+' <button class="secondary" id="signout">Sign out</button>'; $("signout").onclick=()=>{sessionStorage.removeItem("slate_token");location.reload()};loadResumes()}
+async function initAuth(){
+ let cfg;try{cfg=await (await fetch("/v1/config")).json()}catch(e){msg("authControls","Cannot reach API.",true);return}
+ if(token()){signedIn();return}
+ if(cfg.mode==="dev"){
+  $("authControls").innerHTML='<input id="devEmail" placeholder="you@example.com"><button id="devSignIn">Sign in (local development)</button>';
+  $("devSignIn").onclick=()=>{const email=$("devEmail").value.trim();if(!email)return;sessionStorage.setItem("slate_token","dev:"+email);signedIn(email)}
+ }else if(cfg.mode==="google"){
+  $("authControls").innerHTML='<div id="googleButton"></div>';
+  const render=()=>google.accounts.id.initialize({client_id:cfg.googleClientId,callback:r=>{sessionStorage.setItem("slate_token",r.credential);signedIn()}}),button=()=>google.accounts.id.renderButton($("googleButton"),{theme:"outline",size:"large"});
+  const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=()=>{render();button()};document.head.appendChild(s)
+ }else if(cfg.mode==="supabase"){
+  $("authControls").innerHTML='<button id="sbSignIn">Sign in with Google</button>';
+  const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";s.onload=()=>{const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);$("sbSignIn").onclick=()=>sb.auth.signInWithOAuth({provider:"google"})};document.head.appendChild(s)
+ }else{
+  msg("authControls","Sign-in is not configured. For local development set SLATE_DEV_AUTH=1 before starting Uvicorn.",true)
+ }
+}
+async function loadResumes(){try{const data=await api("/resume");$("resume").innerHTML='<option value="">No resume context</option>'+data.resumes.map(r=>'<option value="'+esc(r.resumeId)+'">'+esc(r.resumeId+" · "+r.name+" · "+r.skillCount+" skills")+'</option>').join("");msg("setupStatus",data.totalCount+" saved resume version(s) available.")}catch(e){msg("setupStatus",e.message,true)}}
+$("refreshResumes").onclick=loadResumes;
+$("start").onclick=async()=>{
+ try{
+  $("start").disabled=true;msg("setupStatus","Preparing your interview…");
+  const data=await api("/interview/mock","POST",{targetRole:$("role").value.trim(),mode:$("mode").value,resumeId:$("resume").value||null});
+  sid=data.sessionId;$("setup").classList.add("hidden");$("session").classList.remove("hidden");$("results").classList.add("hidden");
+  $("question").textContent=data.firstQuestion;$("coachMode").textContent=data.coachMode==="gemini"?"Gemini adaptive coach":"Fallback coach";
+  $("progress").textContent="Question 1";$("answer").value="";msg("sessionStatus",data.coachError?"Gemini unavailable: "+data.coachError:(data.carriedFromEarlier.length?"Prior weak areas included: "+data.carriedFromEarlier.join(", "):"Interview started."),!!data.coachError);
+  if($("mode").value==="voice"){ await prepareAudio(); speak(data.firstQuestion,beginAnswerCapture); }
+ }catch(e){msg("setupStatus",e.message,true)}finally{$("start").disabled=false}
+};
+function speak(text,onDone){
+ if(!("speechSynthesis" in window)){if(onDone)onDone();return}
+ window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);
+ utterance.onend=()=>{if(onDone)onDone()};
+ utterance.onerror=()=>{if(onDone)onDone()};
+ window.speechSynthesis.speak(utterance);
+}
+async function prepareAudio(){
+ try{audioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}});$("audioStatus").textContent="Microphone ready. Audio is processed locally for delivery metrics."}
+ catch(e){audioStream=null;$("audioStatus").textContent="Microphone unavailable. You can still answer by typing; delivery scoring will be unavailable."}
+}
+function beginAnswerCapture(){
+ if(!audioStream||!window.MediaRecorder)return;
+ try{audioChunks=[];recorder=new MediaRecorder(audioStream);recorder.ondataavailable=e=>{if(e.data&&e.data.size)audioChunks.push(e.data)};recorder.start();$("audioStatus").textContent="Recording this answer locally…"}
+ catch(e){recorder=null;$("audioStatus").textContent="Audio recording unavailable; transcript-only evaluation will be used."}
+}
+function stopAnswerCapture(){
+ return new Promise(resolve=>{
+  if(!recorder||recorder.state==="inactive"){resolve(null);return}
+  const active=recorder;active.onstop=()=>resolve(new Blob(audioChunks,{type:active.mimeType||"audio/webm"}));active.stop();
+ });
+}
+async function measureDelivery(blob,transcript){
+ if(!blob||!blob.size)return null;
+ try{
+  const bytes=await blob.arrayBuffer(),ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const decoded=await ctx.decodeAudioData(bytes),samples=decoded.getChannelData(0),sr=decoded.sampleRate;
+  const frame=Math.max(1,Math.floor(sr*.05)),levels=[];
+  for(let i=0;i<samples.length;i+=frame){let sum=0,n=Math.min(frame,samples.length-i);for(let j=0;j<n;j++)sum+=samples[i+j]*samples[i+j];levels.push(Math.sqrt(sum/n))}
+  await ctx.close();
+  const peak=Math.max(...levels,0.00001),threshold=Math.max(.008,peak*.12);
+  let silent=0,pauses=0,inPause=false,run=0,activeLevels=[];
+  for(const v of levels){if(v<threshold){silent++;run++;if(run>=5&&!inPause){pauses++;inPause=true}}else{run=0;inPause=false;activeLevels.push(v)}}
+  const duration=decoded.duration,words=(transcript.trim().match(/\b[\w'-]+\b/g)||[]).length;
+  const mean=activeLevels.reduce((a,b)=>a+b,0)/Math.max(1,activeLevels.length);
+  const variance=activeLevels.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,activeLevels.length);
+  // Estimate fundamental-frequency spread locally; raw audio never leaves the browser.
+  const pitchValues=[],decimation=4,pitchRate=sr/decimation,windowSize=1024;
+  const hop=Math.floor(sr*.15);
+  for(let offset=0;offset+windowSize*decimation<samples.length&&pitchValues.length<400;offset+=hop){
+   const frameData=new Float32Array(windowSize);let avg=0;
+   for(let j=0;j<windowSize;j++){frameData[j]=samples[offset+j*decimation];avg+=frameData[j]}
+   avg/=windowSize;let energy=0;for(let j=0;j<windowSize;j++){frameData[j]-=avg;energy+=frameData[j]*frameData[j]}
+   if(energy/windowSize<.00002)continue;
+   let bestLag=0,bestCorr=0;
+   for(let lag=Math.floor(pitchRate/350);lag<=Math.floor(pitchRate/75);lag++){
+    let corr=0;for(let j=0;j<windowSize-lag;j++)corr+=frameData[j]*frameData[j+lag];
+    corr/=Math.max(1,energy);if(corr>bestCorr){bestCorr=corr;bestLag=lag}
+   }
+   if(bestLag&&bestCorr>.32)pitchValues.push(pitchRate/bestLag);
+  }
+  pitchValues.sort((a,b)=>a-b);
+  const percentile=p=>pitchValues.length?pitchValues[Math.min(pitchValues.length-1,Math.floor((pitchValues.length-1)*p))]:null;
+  const fillers=(transcript.toLowerCase().match(/\b(um|uh|erm|like|you know|basically|actually)\b/g)||[]).length;
+  return {durationSeconds:+duration.toFixed(1),wordsPerMinute:Math.round(words/Math.max(duration,1)*60),
+   pauseRatio:+(silent/Math.max(1,levels.length)).toFixed(2),pauseCount:pauses,
+   fillerCount:fillers,meanVolume:+mean.toFixed(4),volumeVariation:+Math.sqrt(variance).toFixed(4),
+   medianPitchHz:pitchValues.length?+percentile(.5).toFixed(1):null,
+   pitchRangeHz:pitchValues.length?+(percentile(.9)-percentile(.1)).toFixed(1):null};
+ }catch(e){return null}
+}
+async function toggleCamera(){
+ if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;$("cameraPreview").srcObject=null;cameraOn=false;$("cameraToggle").textContent="Enable camera";$("cameraStatus").textContent="Camera is off.";return}
+ try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});$("cameraPreview").srcObject=cameraStream;cameraOn=true;$("cameraToggle").textContent="Turn camera off";$("cameraStatus").textContent="Camera preview is active on this device only. No video is uploaded or recorded."}
+ catch(e){msg("cameraStatus","Camera permission denied or unavailable. You can continue without it.",true)}
+}
+function stopDevices(){
+ if(recognition&&listening)recognition.stop();
+ if(audioStream)audioStream.getTracks().forEach(t=>t.stop());
+ if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
+ audioStream=null;cameraStream=null;$("cameraPreview").srcObject=null;
+ if("speechSynthesis" in window)window.speechSynthesis.cancel();
+}
+$("cameraToggle").onclick=toggleCamera;
+function makeRecognition(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
+ const r=new SR();r.lang="en-IN";r.interimResults=true;r.continuous=true;
+ r.onresult=e=>{let finalText="",interim="";for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalText+=e.results[i][0].transcript+" ";else interim+=e.results[i][0].transcript}
+  if(finalText){$("answer").value=(answerPrefix+" "+finalText).trim();answerPrefix=$("answer").value}
+  msg("sessionStatus",interim?"Listening: "+interim:"Dictation captured.")};
+ r.onerror=e=>msg("sessionStatus","Speech recognition: "+e.error+". You can type your answer instead.",true);
+ r.onend=()=>{listening=false;$("mic").disabled=false;$("stopMic").disabled=true};
+ return r;
+}
+$("mic").onclick=()=>{
+ if(!recognition)recognition=makeRecognition();
+ if(!recognition){msg("sessionStatus","Speech recognition is not supported in this browser. Type your answer instead.",true);return}
+ try{answerPrefix=$("answer").value;recognition.start();listening=true;$("mic").disabled=true;$("stopMic").disabled=false;msg("sessionStatus","Listening…")}catch(e){msg("sessionStatus","Could not start microphone. Check permissions or type your answer.",true)}
+};
+$("stopMic").onclick=()=>{if(recognition&&listening)recognition.stop()};
+$("submit").onclick=async()=>{
+ try{
+  $("submit").disabled=true;if(listening&&recognition)recognition.stop();
+  const text=$("answer").value.trim();if(!text)throw new Error("Enter or dictate an answer first.");
+  msg("sessionStatus","Evaluating your answer…");
+  const audioBlob=await stopAnswerCapture();
+  const deliveryMetrics=$("mode").value==="voice"?await measureDelivery(audioBlob,text):null;
+  const result=await api("/interview/"+sid+"/answer","POST",{text,deliveryMetrics});
+  if(result.evaluation){const e=result.evaluation;$("liveReview").innerHTML='<b>Score: '+e.score+'/5</b> · '+esc(e.feedback)+'<br>'+(e.improvements.length?"Improve: "+esc(e.improvements.join("; ")):"");}
+  $("question").textContent=result.nextQuestion;$("answer").value="";$("progress").textContent="Question "+(Number($("progress").dataset.count||1)+1);$("progress").dataset.count=String(Number($("progress").dataset.count||1)+1);msg("sessionStatus",result.isFollowUp?"Follow-up probe.":"Moving to the next interview topic.");
+  if(result.evaluation?.deliveryScore){$("liveReview").innerHTML+='<br><b>Delivery: '+esc(result.evaluation.deliveryScore)+'/5</b> · '+esc(result.evaluation.deliveryFeedback)}
+  if($("mode").value==="voice")speak(result.nextQuestion,beginAnswerCapture);
+ }catch(e){msg("sessionStatus",e.message,true)}finally{$("submit").disabled=false}
+};
+async function finish(){
+ stopDevices();
+ const fb=await api("/interview/"+sid+"/feedback");$("session").classList.add("hidden");$("results").classList.remove("hidden");
+ $("summary").innerHTML='<p><b>'+esc(fb.summary)+'</b></p><p>Content score: <b>'+esc(fb.averageScore)+'/5</b>'+(fb.averageDeliveryScore!==null&&fb.averageDeliveryScore!==undefined?' · Voice delivery: <b>'+esc(fb.averageDeliveryScore)+'/5</b>':'')+' · Coach: '+esc(fb.coachMode)+'</p>'+(fb.coachError?'<p class="status error"><b>Gemini unavailable:</b> '+esc(fb.coachError)+'</p>':"");
+ const reviews=fb.answerReviews||[];$("details").innerHTML=reviews.map((r,i)=>'<div class="review"><b>'+esc(r.isFollowUp?"Follow-up":"Answer "+(i+1))+' · '+esc(r.score)+'/5</b><p>'+esc(r.question)+'</p><blockquote><b>Your answer (verbatim):</b><p>“'+esc(r.answer||"Answer text was not retained for this older session.")+'”</p></blockquote><p>'+esc(r.feedback)+'</p>'+(r.strengths.length?'<p><b>Strengths:</b> '+esc(r.strengths.join("; "))+'</p>':"")+(r.improvements.length?'<p><b>Improve:</b> '+esc(r.improvements.join("; "))+'</p>':"")+(r.deliveryScore?'<p><b>Voice delivery: '+esc(r.deliveryScore)+'/5</b> · '+esc(r.deliveryFeedback)+'</p>':"")+(r.deliveryImprovements?.length?'<p><b>Delivery suggestions:</b> '+esc(r.deliveryImprovements.join("; "))+'</p>':"")+'</div>').join("")+(fb.weakAreas.length?'<h3>Weak areas to revisit</h3><ul>'+fb.weakAreas.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"")+(fb.strengths.length?'<h3>Strengths</h3><ul>'+fb.strengths.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"")+(fb.improvements.length?'<h3>Recommended improvements</h3><ul>'+fb.improvements.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"");
+}
+$("endInterview").onclick=async()=>{
+ try{$("endInterview").disabled=true;if(listening&&recognition)recognition.stop();msg("sessionStatus","Ending interview and preparing your report…");await stopAnswerCapture();await api("/interview/"+sid+"/end","POST",{});await finish()}
+ catch(e){msg("sessionStatus",e.message,true);$("endInterview").disabled=false}
+};
+$("again").onclick=()=>{sid=null;$("results").classList.add("hidden");$("setup").classList.remove("hidden");$("liveReview").textContent="";$("progress").dataset.count="1";$("endInterview").disabled=false};
+initAuth();
+</script></body></html>
