@@ -46,6 +46,9 @@ STATUS.setdefault("unauthenticated", 401)
 STATUS.setdefault("invalid_token", 401)
 STATUS.setdefault("auth_not_configured", 503)
 STATUS.setdefault("state_conflict", 409)
+STATUS.setdefault("invalid_target", 422)
+STATUS.setdefault("invalid_source_preservation", 422)
+STATUS.setdefault("target_not_found", 404)
 
 class ResumeIn(BaseModel):
     text: str = Field(max_length=200_000)  # plain text for now; PDF upload is an open question in the contract
@@ -57,6 +60,17 @@ class SkillReviewIn(BaseModel):
 class TailorIn(BaseModel):
     resumeId: str
     jobId: str
+
+class TargetIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    organization: str = Field(default="", max_length=160)
+    rawText: str = Field(min_length=1, max_length=20_000)
+    sourceUrl: str = Field(default="", max_length=2000)
+    parentTargetId: Optional[str] = None
+
+class TargetTailorIn(BaseModel):
+    resumeId: str
+    targetId: str
 
 class EditIn(BaseModel):
     tailoredResume: Optional[str] = None
@@ -122,6 +136,23 @@ def _mount(r: APIRouter, get_svc):
     @r.get("/jobs")
     def jobs(request: Request, query: str = "", location: str = "", resumeId: Optional[str] = None):
         with get_svc(request) as svc: return svc.jobs(query, location, resumeId)
+
+    @r.post("/targets")
+    def create_target(request: Request, b: TargetIn):
+        with get_svc(request) as svc:
+            return svc.create_target(b.title, b.organization, b.rawText, b.sourceUrl, b.parentTargetId)
+
+    @r.get("/targets")
+    def list_targets(request: Request):
+        with get_svc(request) as svc: return svc.list_targets()
+
+    @r.get("/targets/{target_id}")
+    def get_target(request: Request, target_id: str):
+        with get_svc(request) as svc: return svc.get_target(target_id)
+
+    @r.post("/tailor/target")
+    def tailor_target(request: Request, b: TargetTailorIn):
+        with get_svc(request) as svc: return svc.tailor_target(b.resumeId, b.targetId)
 
     @r.post("/tailor")
     def tailor(request: Request, b: TailorIn):
@@ -228,6 +259,11 @@ def _shell(r: APIRouter) -> FastAPI:
     web_ai = os.path.join(web_root, "ai.html")
     web_interview = os.path.join(web_root, "interview.html")
 
+    @app.get("/resume", include_in_schema=False)
+    @app.get("/targets", include_in_schema=False)
+    @app.get("/draft", include_in_schema=False)
+    @app.get("/comparisons", include_in_schema=False)
+    @app.get("/roadmap", include_in_schema=False)
     @app.get("/", include_in_schema=False)
     def home():
         return FileResponse(web) if os.path.exists(web) else JSONResponse({"message": "Slate API"})

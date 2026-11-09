@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as tmp:
    print('401 complete',flush=True)
    # Explicit typed fallback if mic denied / recognition unsupported; camera denied.
    p=page();p.add_init_script('Object.defineProperty(navigator.mediaDevices,"getUserMedia",{value:async()=>{throw new Error("denied")}});window.SpeechRecognition=undefined;window.webkitSpeechRecognition=undefined;window.speechSynthesis=undefined;')
-   p.reload();p.locator('#start').click();p.locator('#session').wait_for(state='visible');p.locator('#mic').click();assert 'not supported' in p.locator('#sessionStatus').inner_text();p.locator('#cameraToggle').click();p.wait_for_function('document.querySelector("#cameraStatus").textContent.includes("denied")');p.close()
+   p.reload();p.locator('#start').click();p.locator('#session').wait_for(state='visible');p.locator('#mic').click();assert 'not supported' in p.locator('#sessionStatus').inner_text();p.locator('.camfold').evaluate('e=>e.open') or p.locator('.camfold > summary').click();p.locator('#cameraToggle').click();p.wait_for_function('document.querySelector("#cameraStatus").textContent.includes("denied")');p.close()
    p=page();p.evaluate('navigator.mediaDevices.getUserMedia=async()=>{throw new Error("denied")}; window.speechSynthesis=undefined');p.locator('#mode').select_option('voice');p.locator('#start').click();p.wait_for_function('document.querySelector("#audioStatus").textContent.includes("unavailable")');p.locator('#answer').fill('I compared test results with the source records and checked SQL.');p.locator('#submit').click();p.wait_for_function('document.querySelector("#liveReview").textContent.includes("Score:")');p.locator('#endInterview').click();p.locator('#results').wait_for(state='visible');p.close()
    print('denied complete',flush=True)
    # Late media permission is closed after sign out, never attached to the next account.
@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory() as tmp:
     if kind=='audio':p.locator('#mode').select_option('voice')
     p.locator('#start').click();p.locator('#session').wait_for(state='visible')
     if kind=='video':
-     p.locator('#cameraToggle').click();p.evaluate('()=>{void toggleCamera()}');assert p.evaluate('window.mediaRequests')==1
+     p.locator('.camfold').evaluate('e=>e.open') or p.locator('.camfold > summary').click();p.locator('#cameraToggle').click();p.evaluate('()=>{void toggleCamera()}');assert p.evaluate('window.mediaRequests')==1
     p.wait_for_function('window.mediaResolve!==null');p.locator('#signout').click();p.locator('#devEmail').fill('second@example.com');p.locator('#devSignIn').click()
     p.evaluate('window.mediaResolve({getTracks:()=>[{stop:()=>window.stopped=true}]})');p.wait_for_function('window.stopped');assert p.evaluate('audioStream===null&&cameraStream===null');p.close()
    p=page();p.evaluate('()=>{window.doneCount=0;Object.defineProperty(window,"speechSynthesis",{value:{cancel:()=>{},speak:u=>window.lastUtterance=u},configurable:true});speak("Synthetic prompt",()=>window.doneCount++);window.lastUtterance.onend();window.lastUtterance.onerror()}');assert p.evaluate('window.doneCount')==1;p.close()

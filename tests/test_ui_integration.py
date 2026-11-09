@@ -37,3 +37,11 @@ def test_interview_ui_has_camera_voice_delivery_and_manual_end_controls():
     assert '"/end"' in page
     assert 'id="endInterview"' in page
     assert 'No video is uploaded or recorded' in page
+
+
+def test_every_workspace_part_has_a_distinct_route_and_nav():
+    for part in ('resume','targets','draft','comparisons','roadmap'):
+        assert 'data-part="'+part+'"' in HTML
+    assert 'pageParts={resume:["s1"],targets:["targetWorkspace"],draft:["s3"],comparisons:["s2"],roadmap:["s4"]}' in HTML
+    assert 'crypto.subtle.digest("SHA-256",bytes)' in HTML
+    assert 'beforeunload' in HTML
