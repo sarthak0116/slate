@@ -194,3 +194,14 @@ can replace a previous typed source with the actual PDF extraction. These are
 additive fields, not an edited PDF or independently verified qualifications.
 The current draft display is separately bound to draft identity/generation:
 late decisions from a prior draft must not label a newer draft approved.
+
+### Header and plain-list review metadata
+
+New parses add `nameEvidence:{status,sourceText}`. A
+`header_candidate_not_verified` is a literal header heuristic, not authenticated
+identity. `not_recognized` has null sourceText and name Unknown. Additive
+`uncertainSkills` entries can use `source:ambiguous_plain_skills_block` for short
+unbulleted unknown phrases. They remain outside parsed.skills/matching until an
+explicit user review adds them as user_statement. Consumers should not treat
+uncertainSkills as extracted competence. Existing saved parses need explicit
+reparse, not an automatic migration.
