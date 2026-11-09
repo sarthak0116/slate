@@ -171,6 +171,13 @@ function resetSourceResults(){
   ["s2","s3","s4","s5"].forEach(id=>$(id).classList.add("off"));
   say("dmsg","Choose a job to create a fresh unapproved draft for this resume version.");
 }
+// Editing the source text is not reparsing it. Detach every derived result
+// immediately so the visible text cannot masquerade as the saved source.
+$("resume").oninput=()=>{
+  sourceRequest++;resetSourceResults();rid=null;
+  $("parsed").textContent="Source text changed. Parse it again before reviewing skills or creating a draft.";
+  $("skillreview").hidden=true;$("reviewskills").value="";$("confirmreview").checked=false;
+};
 async function loadSavedVersions(){try{
   if(!token()) return;
   const request=sourceRequest;
