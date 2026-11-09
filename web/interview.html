@@ -2,6 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Slate · Mock Interview</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+(()=>{let theme;try{theme=localStorage.getItem('slate_theme')}catch(_){}if(theme!=="light"&&theme!=="dark")theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=theme})();
+</script>
 <style>
 :root{--navy:#14213d;--navy2:#1d2f55;--blue:#2b5fe3;--blue-ink:#1e4fd0;--blue-soft:#edf2fd;--ink:#131b2e;--mut:#5b6678;--line:#e4e8f0;--soft:#f5f7fb;--card:#fff;--bad:#b3261e;--warn:#8a5a00;--ok:#1e4fd0;--good:#176b42;--radius:16px;--shadow:0 1px 2px rgba(16,24,40,.05),0 6px 20px rgba(16,24,40,.04)}
 *{box-sizing:border-box}
@@ -207,12 +210,50 @@ blockquote{background:rgba(240,244,252,.8);border-left:3px solid #3564de;border-
 #loginbox:has(#out) button,#authPanel:has(#signout) button{font-size:12px;margin:0;padding:8px 12px}
 .pagehead h1{background:none;color:var(--navy);-webkit-text-fill-color:var(--navy)}
 @media(min-width:901px){.topbar{width:204px}.content{margin-left:204px;margin-right:0;padding-left:34px;padding-right:34px}}
+/* Theme is applied before paint and shared by all seven workspace pages. */
+.theme-toggle{background:rgba(250,252,255,.8);border:1px solid var(--line);border-radius:999px;color:var(--navy);font-size:12px;padding:8px 12px;margin:0;box-shadow:none;align-self:flex-start;min-height:40px;white-space:nowrap}
+@media(min-width:901px){.theme-toggle{margin:0 10px}.sidebar-note+.theme-toggle{margin-top:10px}}
+@media(max-width:900px){.theme-toggle{position:absolute;right:16px;top:10px;padding:5px 12px;min-height:36px}}
+html[data-theme=dark]{color-scheme:dark;background:#101722;--navy:#e5ebf7;--navy2:#c8d8f6;--ink:#e0e7f3;--mut:#a6b3c8;--line:rgba(163,185,222,.18);--soft:#1a2537;--card:#192435;--blue:#89adff;--blue-ink:#acc5ff;--blue-soft:#243555;--bad:#ffada7;--warn:#f2cd82;--ok:#aac5ff;--good:#9cdbb9}
+html[data-theme=dark] body{color:var(--ink);background:radial-gradient(ellipse at 14% 5%,rgba(61,88,144,.23),transparent 47%),radial-gradient(ellipse at 92% 30%,rgba(94,74,135,.18),transparent 50%),linear-gradient(145deg,#121c2b,#141b29 55%,#111b28);min-height:100vh}
+html[data-theme=dark] .topbar{background:rgba(18,28,44,.86);border-color:var(--line);box-shadow:none}
+html[data-theme=dark] .nav-indicator{background:#293c5e;border-color:rgba(164,193,245,.12);box-shadow:0 2px 9px rgba(0,0,0,.12)}
+html[data-theme=dark] .nlink.active{color:#c3d6ff;background:#293c5e}html[data-theme=dark] .nav.motion-ready .nlink.active{background:transparent}
+html[data-theme=dark] .nlink:hover{background:rgba(112,146,210,.12);color:#d8e5ff}
+html[data-theme=dark] section,html[data-theme=dark] .panel{background:rgba(25,37,56,.78);border-color:rgba(153,181,226,.14);box-shadow:0 10px 40px -28px #000}
+html[data-theme=dark] .resume-canvas,html[data-theme=dark] .target-canvas,html[data-theme=dark] .artifact-canvas,html[data-theme=dark] #s2[data-route],html[data-theme=dark] #s4[data-route],html[data-theme=dark] #s3.canvas{background:transparent;border:0;box-shadow:none}
+html[data-theme=dark] .source-composer,html[data-theme=dark] .target-composer{background:rgba(28,41,62,.88);border-color:rgba(155,184,233,.18);box-shadow:0 12px 42px -24px rgba(0,0,0,.4)}
+html[data-theme=dark] textarea,html[data-theme=dark] input:not([type=checkbox]),html[data-theme=dark] select{background:#1b293f;color:#e0e7f3;border-color:rgba(163,185,222,.23)}
+html[data-theme=dark] textarea::placeholder,html[data-theme=dark] input::placeholder{color:#98a8c1;opacity:1}
+html[data-theme=dark] #resume,html[data-theme=dark] .target-composer #targettitle,html[data-theme=dark] .target-composer #targettext{background:transparent;color:var(--ink)}
+html[data-theme=dark] .artifact-sheets>div,html[data-theme=dark] #s3 pre{background:#1c2a40;border-color:rgba(164,193,245,.1);box-shadow:0 5px 24px -16px rgba(0,0,0,.5)}
+html[data-theme=dark] .artifact-sheets textarea{color:var(--ink)}
+html[data-theme=dark] button,html[data-theme=dark] .partnext a{background:#416bce;color:#fff;border-color:transparent;box-shadow:0 3px 8px rgba(0,0,0,.14)}
+html[data-theme=dark] button:hover:not(:disabled){background:#4b78dd}
+html[data-theme=dark] button.sec,html[data-theme=dark] button.secondary,html[data-theme=dark] button.theme-toggle{background:#24334b;color:#dce7fa;border-color:rgba(163,185,222,.22)}
+html[data-theme=dark] button.sec:hover,html[data-theme=dark] button.secondary:hover,html[data-theme=dark] button.theme-toggle:hover{background:#2d4161}
+html[data-theme=dark] #approve,html[data-theme=dark] #parse,html[data-theme=dark] #savetarget,html[data-theme=dark] #submit{background:#416bce;color:#fff}
+html[data-theme=dark] .artifact-actions{background:rgba(25,39,61,.94);border-color:rgba(163,185,222,.18);box-shadow:none}
+html[data-theme=dark] .chip,html[data-theme=dark] .pill{background:#263a5c;color:#c0d4ff;border-color:rgba(163,185,222,.24);box-shadow:none}
+html[data-theme=dark] .tag{border-color:#a6b3c8;color:#cbd8ed}html[data-theme=dark] .tag.approved{background:#31528b;color:#fff;border-color:#8dacdf}
+html[data-theme=dark] .warn,html[data-theme=dark] .banner{background:#302b23;color:#f4d89b;border-color:#74603c}
+html[data-theme=dark] .fold,html[data-theme=dark] .saved-drawer[open]{background:rgba(29,43,65,.65);border-color:var(--line)}
+html[data-theme=dark] .question,html[data-theme=dark] #liveReview:not(:empty),html[data-theme=dark] .review,html[data-theme=dark] blockquote{background:#1d2c44;color:var(--ink);border-color:rgba(163,185,222,.2);box-shadow:none}
+html[data-theme=dark] #coachMode{background:#2c325b;border-color:#676ba5;color:#d8d6ff}
+html[data-theme=dark] .uplbox{background:transparent;border-color:#567196}
+html[data-theme=dark] pre,html[data-theme=dark] code,html[data-theme=dark] .q{background:#1b293f;color:#d6e3f9;border-color:var(--line)}
+html[data-theme=dark] #loginbox.signed,html[data-theme=dark] #loginbox:has(#out),html[data-theme=dark] #authPanel:has(#signout){background:none;border:0;box-shadow:none}
+html[data-theme=dark] .error,html[data-theme=dark] .bad,html[data-theme=dark] .dirty{color:#ffada7}
+html[data-theme=dark] .danger{background:#963b46;color:#fff}html[data-theme=dark] .danger:hover{background:#ac4653}
+
+html[data-theme=dark] h2 b{background:#31486c;color:#e4edff}
+html[data-theme=dark] #loginbox,html[data-theme=dark] #authPanel{background:rgba(25,37,56,.78);border-color:rgba(153,181,226,.14)}html[data-theme=dark] #loginbox:has(#out),html[data-theme=dark] #authPanel:has(#signout){background:transparent;border:0}
 </style></head>
 <body>
 <header class="topbar">
 <a class="brand" href="/">Slate<span>.</span></a>
 <nav class="nav" aria-label="Workspace pages"><a class="nlink" data-route="resume" data-part="resume" href="/resume">Resume</a><a class="nlink" data-route="targets" data-part="targets" href="/targets">Targets</a><a class="nlink" data-route="draft" data-part="draft" href="/draft">Draft</a><a class="nlink" data-route="comparisons" data-part="comparisons" href="/comparisons">Sample comparisons</a><a class="nlink" data-route="roadmap" data-part="roadmap" href="/roadmap">Roadmap</a><a class="nlink active" data-route="interview" href="/interview">Mock interview</a><a class="nlink" data-route="ai" href="/ai">AI draft</a></nav>
-</header>
+<button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode">Dark mode</button></header>
 <div class="content">
 <header class="pagehead">
 <h1>Mock interview</h1>
@@ -443,5 +484,11 @@ function place(){const link=nav.querySelector('.nlink.active');if(!link)return;i
 place();requestAnimationFrame(()=>nav.classList.add('motion-ready'));
 new MutationObserver(place).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});new ResizeObserver(place).observe(nav);document.fonts?.ready.then(place);
 })();
+</script>
+<script>
+(()=>{const button=document.getElementById('theme-toggle');
+function show(){const dark=document.documentElement.dataset.theme==='dark';button.textContent=dark?'Light mode':'Dark mode';button.setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');button.setAttribute('aria-pressed',String(dark));}
+button.addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('slate_theme',next)}catch(_){}show()});
+window.addEventListener('storage',e=>{if(e.key==='slate_theme'&&(e.newValue==='light'||e.newValue==='dark')){document.documentElement.dataset.theme=e.newValue;show()}});show();})();
 </script>
 </body></html>
