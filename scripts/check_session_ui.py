@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as tmp:
             browser = pw.chromium.launch(executable_path=os.environ.get('CHROME_PATH', '/usr/bin/google-chrome'), args=['--no-sandbox'])
             for path in ('/', '/ai'):
                 for result in ('success', 'error', 'unauthorized', 'network'):
-                    page = browser.new_page()
+                    page = browser.new_page();page.on('dialog',lambda d:d.accept())
                     errors = []
                     page.on('pageerror', lambda e: errors.append(str(e)))
                     page.goto('http://127.0.0.1:8014'+path)
@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as tmp:
                     endpoint = '**/v1/tailor' if path == '/' else '**/v1/tailor/ai'
                     page.route(endpoint, lambda route: delayed.append(route))
                     if path == '/':
-                        page.locator('[data-j]').first.click()
+                        page.evaluate('routePage("comparisons")');page.locator('[data-j]').first.click()
                     else:
                         page.locator('#gen').click()
                     page.wait_for_timeout(50)
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory() as tmp:
                     page.close()
             for path in ('/', '/ai'):
                 for late_status in (200, 500):
-                    page = browser.new_page()
+                    page = browser.new_page();page.on('dialog',lambda d:d.accept())
                     page.goto('http://127.0.0.1:8014'+path)
                     page.locator('#devmail').fill('context@example.com')
                     page.locator('#devgo').click()
@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory() as tmp:
                             route.fulfill(status=200,content_type='application/json',body=json.dumps({'draftId':'synthetic_'+str(counter[0]),'tailoredResume':'Synthetic draft','coverNote':'Synthetic note','requiresApproval':True,'violations':[]}))
                         page.route('**/v1/tailor/ai', synthetic_ai)
                     def generate():
-                        if path == '/':page.locator('[data-j]').first.click()
+                        if path == '/':page.evaluate('routePage("comparisons")');page.locator('[data-j]').first.click()
                         else:page.locator('#gen').click()
                     generate()
                     page.wait_for_function('did!==null' if path == '/' else 'draftId!==null')
@@ -127,7 +127,7 @@ with tempfile.TemporaryDirectory() as tmp:
                         current = page.evaluate('did')
                         assert page.request.get('http://127.0.0.1:8014/v1/drafts/'+current+'/export',headers={'Authorization':'Bearer dev:context@example.com'}).status == 403
                     page.close()
-            page = browser.new_page()
+            page = browser.new_page();page.on('dialog',lambda d:d.accept())
             page.goto('http://127.0.0.1:8014/')
             page.locator('#devmail').fill('pdf-context@example.com')
             page.locator('#devgo').click()
@@ -145,7 +145,7 @@ with tempfile.TemporaryDirectory() as tmp:
             page.close()
             for path in ('/', '/ai'):
                 for pending_parse in (False, True):
-                    page = browser.new_page()
+                    page = browser.new_page();page.on('dialog',lambda d:d.accept())
                     page.goto('http://127.0.0.1:8014'+path)
                     page.locator('#devmail').fill('source-edit@example.com')
                     page.locator('#devgo').click()
@@ -160,12 +160,13 @@ with tempfile.TemporaryDirectory() as tmp:
                     else:
                         page.wait_for_function('rid!==null' if path=='/' else 'resumeId!==null')
                         if path=='/':
-                            page.locator('[data-j]').first.click()
+                            page.evaluate('routePage("comparisons")');page.locator('[data-j]').first.click()
                             page.wait_for_function('did!==null')
                         else:
                             page.route('**/v1/tailor/ai',lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps({'draftId':'synthetic','tailoredResume':'Alex Example','coverNote':'Synthetic note','requiresApproval':True,'violations':[]})))
                             page.locator('#gen').click()
                             page.wait_for_function('draftId!==null')
+                    page.evaluate('routePage("resume")') if path=='/' else None
                     page.locator('#resume').fill('Blake Example\nSkills: wound care, patient assessment')
                     if pending_parse:
                         response = held[0].fetch()
@@ -188,7 +189,7 @@ with tempfile.TemporaryDirectory() as tmp:
             # Loading an externally supplied fragment must never create/approve
             # anything, even in an already signed-in browser.
             for fragment in ('demo', 'demo-approve', 'demo-reject'):
-                page = browser.new_page()
+                page = browser.new_page();page.on('dialog',lambda d:d.accept())
                 page.add_init_script("sessionStorage.setItem('slate_token','dev:fixture@example.com')")
                 writes = []
                 def record_write(request):
@@ -202,14 +203,14 @@ with tempfile.TemporaryDirectory() as tmp:
             # Saving must bind the clean baseline to the submitted payload,
             # never text typed while the save response is in flight.
             for changed in (None, 'dres', 'dnote'):
-                page = browser.new_page()
+                page = browser.new_page();page.on('dialog',lambda d:d.accept())
                 page.goto('http://127.0.0.1:8014/')
                 page.locator('#devmail').fill('save-snapshot@example.com')
                 page.locator('#devgo').click()
                 page.locator('#resume').fill('Alex Example\nSkills: Python, SQL, Excel, communication')
                 page.locator('#parse').click()
                 page.wait_for_function('document.querySelector("#parsed").textContent.includes("Alex Example")')
-                page.locator('[data-j]').first.click()
+                page.evaluate('routePage("comparisons")');page.locator('[data-j]').first.click()
                 page.wait_for_function('did!==null')
                 submitted_res = page.locator('#dres').input_value()
                 submitted_note = page.locator('#dnote').input_value()+' Saved change.'
