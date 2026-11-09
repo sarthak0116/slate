@@ -19,7 +19,7 @@ from contextlib import nullcontext
 from typing import Optional
 from fastapi import APIRouter, FastAPI, File, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field, StrictBool
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -124,6 +124,23 @@ def _mount(r: APIRouter, get_svc):
                 raise SlateError("ai_not_configured",
                                  "AI tailoring is off on this server. Set LLM_API_KEY to enable it.")
             return fn(b.resumeId, b.jobId)
+
+    @r.get("/drafts")
+    def list_drafts(request: Request):
+        with get_svc(request) as svc: return svc.list_drafts()
+
+    @r.get("/drafts/{draft_id}")
+    def get_draft(request: Request, draft_id: str):
+        with get_svc(request) as svc: return svc.get_draft(draft_id)
+
+    @r.get("/drafts/{draft_id}/download")
+    def download(request: Request, draft_id: str):
+        with get_svc(request) as svc:
+            text = svc.download_draft(draft_id)
+            # Generated ids are not accepted as arbitrary header text.
+            import re
+            safe = re.sub(r"[^A-Za-z0-9_-]", "_", draft_id)[:80]
+            return PlainTextResponse(text, headers={"Content-Disposition": 'attachment; filename="slate-' + safe + '.txt"'})
 
     @r.post("/drafts/{draft_id}/edit")
     def edit(request: Request, draft_id: str, b: EditIn):
