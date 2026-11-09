@@ -29,7 +29,12 @@ with tempfile.TemporaryDirectory() as tmp:
    p.unroute('**/v1/interview/*/feedback');p.locator('#endInterview').click();p.locator('#results').wait_for(state='visible');assert 'employee complaint' in p.locator('#details').inner_text()
    p.screenshot(path='/tmp/slate-interview-report.png',full_page=True);p.locator('#again').click();assert p.locator('#question').inner_text()=='' and not p.locator('#submit').is_disabled();p.close()
    # Each data operation ignores late success/error/401 on account switch.
-   print('typed complete',flush=True)
+   print('typed compl"""Synthetic localhost interview checks. No live provider or actual mic/camera.
+         Requires Playwright and Chromium. API_PYTHON may select the API virtualenv.
+         """
+         import json,os,subprocess,tempfile,time,urllib.request
+         from pathlib import Path
+         frete',flush=True)
    for action in ('start','answer','end','feedback'):
     for status in (200,500,401):
      print(action,status,flush=True);p=page()
