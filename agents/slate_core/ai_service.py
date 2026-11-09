@@ -66,6 +66,14 @@ class AISlateService(SlateService):
                 "flaggedClaims": flagged, "violations": violations,
                 "requiresApproval": True}
 
+    def get_draft(self, draft_id):
+        result = super().get_draft(draft_id)
+        if result["content"].get("aiGenerated"):
+            blocks = self._blocks(result["resumeId"], J.get_job(result["jobId"]))
+            result["violations"] += check_grounding(result["content"].get("tailoredResume", ""), blocks, allow_job=False)
+            result["violations"] += check_grounding(result["content"].get("coverNote", ""), blocks)
+        return result
+
     def _check_draft(self, draft_id):
         """Approval re-checks the claim rules (super) AND the grounding of the
         stored content, so a draft with unsupported lines cannot be approved.
