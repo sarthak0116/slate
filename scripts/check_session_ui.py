@@ -143,6 +143,47 @@ with tempfile.TemporaryDirectory() as tmp:
             assert 'Blake Example' in page.locator('#parsed').inner_text()
             page.screenshot(path=os.environ.get('CONTEXT_SCREENSHOT','/tmp/slate-context-corrected.png'),full_page=True)
             page.close()
+            for path in ('/', '/ai'):
+                for pending_parse in (False, True):
+                    page = browser.new_page()
+                    page.goto('http://127.0.0.1:8014'+path)
+                    page.locator('#devmail').fill('source-edit@example.com')
+                    page.locator('#devgo').click()
+                    page.locator('#resume').fill('Alex Example\nSkills: Python, SQL, communication')
+                    held = []
+                    if pending_parse:
+                        page.route('**/v1/resume', lambda route: held.append(route))
+                    page.locator('#parse').click()
+                    if pending_parse:
+                        page.wait_for_timeout(50)
+                        assert held
+                    else:
+                        page.wait_for_function('rid!==null' if path=='/' else 'resumeId!==null')
+                        if path=='/':
+                            page.locator('[data-j]').first.click()
+                            page.wait_for_function('did!==null')
+                        else:
+                            page.route('**/v1/tailor/ai',lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps({'draftId':'synthetic','tailoredResume':'Alex Example','coverNote':'Synthetic note','requiresApproval':True,'violations':[]})))
+                            page.locator('#gen').click()
+                            page.wait_for_function('draftId!==null')
+                    page.locator('#resume').fill('Blake Example\nSkills: wound care, patient assessment')
+                    if pending_parse:
+                        response = held[0].fetch()
+                        held[0].fulfill(response=response)
+                        page.wait_for_timeout(60)
+                    assert page.evaluate('rid===null && did===null' if path=='/' else 'resumeId===null && draftId===null')
+                    assert 'Source text changed' in page.locator('#parsed').inner_text()
+                    assert 'off' in page.locator('#s2').get_attribute('class').split()
+                    assert 'off' in page.locator('#s3').get_attribute('class').split()
+                    assert 'Blake Example' in page.locator('#resume').input_value()
+                    assert page.locator('#dres').input_value()=='' if path=='/' else page.locator('#dres').inner_text()==''
+                    if path=='/':assert page.locator('#skillreview').is_hidden()
+                    # A fresh deliberate parse binds the newly visible text.
+                    page.unroute('**/v1/resume')
+                    page.locator('#parse').click()
+                    page.wait_for_function('rid!==null' if path=='/' else 'resumeId!==null')
+                    if path=='/':assert 'Blake Example' in page.locator('#parsed').inner_text()
+                    page.close()
             # Loading an externally supplied fragment must never create/approve
             # anything, even in an already signed-in browser.
             for fragment in ('demo', 'demo-approve', 'demo-reject'):
@@ -157,6 +198,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.wait_for_timeout(200)
                 assert not writes, writes
                 page.close()
+            print("4 source-input context cases passed")
             browser.close()
         print('8 account-switch + 4 same-source draft + 1 PDF source + 3 URL-fragment cases passed; server stopped')
     finally:
