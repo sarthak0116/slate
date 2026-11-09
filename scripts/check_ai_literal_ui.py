@@ -24,6 +24,10 @@ with tempfile.TemporaryDirectory() as d:
    assert page.locator('[data-untrusted-marker]').count()==0
    assert marker in page.locator('#flags').inner_text()
    assert marker in page.locator('#dres').inner_text()
+   assert page.locator('#s3').bounding_box()['y']<page.locator('.composer').bounding_box()['y']
+   for width in (390,320):
+    page.set_viewport_size({'width':width,'height':1000});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Populated AI canvas overflow'
+   page.set_viewport_size({'width':1100,'height':1100})
    # Approval errors quote draft/source data too: display them literally.
    page.route('**/v1/approvals',lambda route:route.fulfill(status=422,content_type='application/json',body=json.dumps({'error':{'message':marker}})))
    page.locator('#approve').click();page.wait_for_function('document.querySelector("#decision").textContent.includes("literal warning")')

@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as d:
    exact_res=page.locator('#dres').input_value();exact_note=page.locator('#dnote').input_value()
    page.locator('#approve').click();page.wait_for_function('document.querySelector("#status").textContent==="approved"')
    page.reload();page.wait_for_function('document.querySelector("#saveddrafts").options.length>1')
-   page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click()
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click()
    page.wait_for_function('did!==null')
    assert page.locator('#status').inner_text()=='approved'
    assert page.locator('#dres').input_value()==exact_res and page.locator('#dnote').input_value()==exact_note
@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as d:
    assert page.request.get('http://127.0.0.1:8017/v1/drafts/'+old+'/download',headers={'Authorization':'Bearer dev:fixture@example.com'}).status==403
    assert page.request.get('http://127.0.0.1:8017/v1/drafts/'+current+'/download',headers={'Authorization':'Bearer dev:fixture@example.com'}).status==403
    page.reload();page.wait_for_function('document.querySelector("#saveddrafts").options.length>1')
-   page.locator('#saveddrafts').select_option(current);page.locator('#opendraft').click();page.wait_for_function('did!==null')
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(current);page.locator('#opendraft').click();page.wait_for_function('did!==null')
    assert page.locator('#status').inner_text()=='draft'
    assert page.locator('#dnote').input_value()==exact_note+' Edited version.'
    # A download started before further typing must not hand off a version
@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory() as d:
    page.unroute('**/v1/drafts/'+current+'/download')
    # Late opened draft from the prior account must not populate another login.
    held=[];page.route('**/v1/drafts/'+old,lambda route:held.append(route))
-   page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click();page.wait_for_timeout(50)
+   page.locator('#draft-library').evaluate('e=>e.open') or page.locator('#draft-library > summary').click();page.locator('#saveddrafts').select_option(old);page.locator('#opendraft').click();page.wait_for_timeout(50)
    assert held
    page.evaluate('recoverSignIn()');page.locator('#devmail').fill('other@example.com');page.locator('#devgo').click()
    held[0].fulfill(status=200,content_type='application/json',body=json.dumps({'draftId':old,'private':'OLD PRIVATE'}))
