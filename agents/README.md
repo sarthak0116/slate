@@ -30,6 +30,16 @@ positive mention can support the same candidate. Context rules are conservative,
 not general semantic negation detection in every language. This filter applies
 only when parsing a resume; draft claim checks still detect all known mentions.
 
+### Draft save input snapshots
+
+The main review editor records the exact text submitted with a successful save.
+Typing while Save is in flight is preserved but remains unsaved/dirty; approve
+and export stay disabled until that later text is separately saved. This avoids
+showing later unsaved words as if they were the server's saved draft. Existing
+source/account/draft response guards still apply. Synthetic browser checks cover
+unchanged text and either field changing during a delayed save.
+
+
 ### Review/correct skill candidates
 
 The classic page lets a signed-in user edit a short skill list and explicitly
@@ -170,12 +180,3 @@ was checked for tracked runtime databases/uploads; none were found. No existing
 state is deleted or rewritten by the ignore change. Keep local state private;
 for an existing shared/tracked database, stop and review an explicit migration or
 access change instead of blindly deleting files or rewriting history.
-
-### Draft save input snapshots
-
-The main review editor records the exact text submitted with a successful save.
-Typing while Save is in flight is preserved but remains unsaved/dirty; approve
-and export stay disabled until that later text is separately saved. This avoids
-showing later unsaved words as if they were the server's saved draft. Existing
-source/account/draft response guards still apply. Synthetic browser checks cover
-unchanged text and either field changing during a delayed save.
