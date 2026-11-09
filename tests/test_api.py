@@ -65,3 +65,52 @@ def test_edit_with_unsupported_claim_is_rejected_over_http(c):
     assert r.status_code == 422 and r.json()["error"]["code"] == "unsupported_claim"
     ok = c.post(f"/v1/drafts/{d}/edit", json={"coverNote": "I use Python and Git."})
     assert ok.status_code == 200
+
+def test_interview_accepts_resume_context_and_voice_mode(c):
+    rid = _rid(c)
+    started = c.post("/v1/interview/mock", json={
+        "targetRole": "Data Analyst", "mode": "voice", "resumeId": rid
+    })
+    assert started.status_code == 200
+    body = started.json()
+    assert body["mode"] == "voice"
+    assert body["sessionId"]
+    assert body["firstQuestion"]
+    assert body["coachMode"] == "deterministic_fallback"
+    answer = c.post(f"/v1/interview/{body['sessionId']}/answer",
+                    json={"text": "I used Python to clean a dataset and checked missing values."})
+    assert answer.status_code == 200
+    assert "evaluation" in answer.json()
+
+
+def test_interview_rejects_empty_answer(c):
+    sid = c.post("/v1/interview/mock",
+                 json={"targetRole": "Data Analyst"}).json()["sessionId"]
+    response = c.post(f"/v1/interview/{sid}/answer", json={"text": "   "})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "answer_empty"
+
+
+def test_direct_interview_page_is_served(c):
+    response = c.get("/interview")
+    assert response.status_code == 200
+    assert "Slate" in response.text
+    assert "Start interview" in response.text
+
+
+def test_interview_only_ends_when_end_endpoint_is_called(c):
+    started = c.post("/v1/interview/mock", json={"targetRole": "Data Analyst"}).json()
+    sid = started["sessionId"]
+    for _ in range(8):
+        answer = c.post(f"/v1/interview/{sid}/answer", json={
+            "text": "I would inspect the data, validate assumptions, and communicate the result.",
+            "deliveryMetrics": {"wordsPerMinute": 130, "pauseRatio": 0.2, "fillerCount": 1}
+        })
+        assert answer.status_code == 200
+        assert answer.json()["done"] is False
+    feedback = c.post(f"/v1/interview/{sid}/end")
+    assert feedback.status_code == 200
+    assert feedback.json()["ended"] is True
+    assert feedback.json()["answeredCount"] == 8
+    after_end = c.post(f"/v1/interview/{sid}/answer", json={"text": "late answer"})
+    assert after_end.status_code == 409
