@@ -98,17 +98,13 @@ A tailor result is always a draft. Nothing leaves the system without the approva
 
 ### 5. Mock interview
 
-`POST /v1/interview/mock` with `{ "targetRole": "Data Analyst", "mode": "text" }` starts a session and returns `{ "sessionId": "int_101" }`.
+`POST /v1/interview/mock` accepts `{ "targetRole": "Data Analyst", "mode": "text", "resumeId": "res_123" }`; `mode` may be `text` or `voice`, and `resumeId` is optional. The authenticated service scopes the resume to the verified user and sends only bounded structured resume facts to the server-side Gemini coach. The response includes `sessionId`, `firstQuestion`, `carriedFromEarlier`, `mode`, `aiPowered`, and `coachMode`.
 
-`GET /v1/interview/{sessionId}/feedback`
+`POST /v1/interview/{sessionId}/answer` accepts `{ "text": "...", "deliveryMetrics": {...} }`; deliveryMetrics is optional and contains bounded numeric features derived locally from the microphone recording (speaking rate, pause ratio/count, filler count, volume variation, estimated pitch range). Raw audio is not uploaded. The response returns `done:false`, `nextQuestion`, `isFollowUp`, `evaluation`, and `aiPowered`. Evaluation separates content score/feedback from delivery score/feedback when voice metrics are available. Gemini can chain contextual follow-ups; there is no fixed question count or automatic completion.
 
-```json
-{
-  "summary": "...",
-  "weakAreas": ["system design basics"],
-  "transcriptRef": "int_101"
-}
-```
+`POST /v1/interview/{sessionId}/end` explicitly ends the session and returns its final feedback. Answers after this endpoint returns are rejected with409. The UI must not end the session merely because a question bank is exhausted.
+
+`GET /v1/interview/{sessionId}/feedback` returns a summary, average content score, weak areas, strengths, improvements, per-answer reviews, delivery reviews, transcript reference, mode, ended state, and coach mode (`gemini`, `mixed`, or `deterministic_fallback`). Model errors or missing Gemini configuration fall back to deterministic content evaluation and a clearly labeled rule-based delivery estimate. Browser voice mode uses speech recognition, local audio feature extraction and speech synthesis where supported; typed answers remain available. The optional camera is a local live preview only: video is not uploaded, stored, or analyzed for face, emotion, or personality.
 
 Interview memory must persist: a later session can reference earlier feedback through `transcriptRef`.
 
