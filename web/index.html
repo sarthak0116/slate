@@ -2,39 +2,124 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Slate</title>
 <style>
-:root{--navy:#14213d;--blue:#2457c5;--line:#e3e7ee;--mut:#5b6678;--bad:#b3261e;--ok:#2457c5}
-*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;color:var(--navy);background:#fff}
-main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
-h1{font-size:28px;margin:0}h1 span{color:var(--blue)}p.sub{color:var(--mut);margin:4px 0 24px}
-section{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
+:root{--navy:#14213d;--blue:#2457c5;--blue-soft:#eef2fb;--ink:#1c2433;--mut:#5b6678;--line:#e3e7ee;--soft:#f6f8fc;--bad:#b3261e;--warn:#8a5a00;--ok:#2457c5;--good:#176b42}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--soft)}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.layout{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh;align-content:start}
+.side{background:#fff;border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;display:flex;flex-direction:column;gap:22px}
+.brand{font-size:20px;font-weight:700;color:var(--navy);letter-spacing:-.02em;padding:0 10px}
+.brand:hover{text-decoration:none}
+.brand span{color:var(--blue)}
+.sidegroup{display:flex;flex-direction:column;gap:2px}
+.sidetitle{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 10px 6px;font-weight:600}
+.slink{display:block;padding:7px 10px;border-radius:8px;color:var(--ink);font-size:14px}
+.slink:hover{background:var(--soft);text-decoration:none}
+.slink.active{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.slink.sub{color:var(--mut);font-size:13.5px}
+.sidefoot{margin-top:auto;font-size:12px;color:var(--mut);border-top:1px solid var(--line);padding:12px 10px 0}
+.content{padding:28px 36px 64px;max-width:980px;width:100%;margin:0 auto}
+.pagehead{margin:2px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.pagehead h1{font-size:24px;margin:0;color:var(--navy);letter-spacing:-.02em}
+.pagehead h1 span{color:var(--blue)}
+.pagehead h1 .hsub{font-size:14px;color:var(--mut);font-weight:500;letter-spacing:0}
+.flowline{font-size:13px;color:var(--mut);margin:8px 0 0}
+.flowline b{color:var(--navy);font-weight:600}
+p.sub{color:var(--mut);margin:6px 0 0;font-size:14px;max-width:74ch}
+section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:0 0 12px}
 section.off{opacity:.45;pointer-events:none}
-h2{font-size:17px;margin:0 0 10px}h2 b{display:inline-block;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;text-align:center;font-size:13px;line-height:24px;margin-right:8px}
-textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:10px;font:14px/1.4 ui-monospace,monospace;color:var(--navy)}
-button:disabled{opacity:.35;cursor:not-allowed}.note{color:var(--mut);font-size:14px;margin:0 0 10px}.dirty{color:var(--bad)}
-button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer;margin:8px 8px 0 0}
-button.sec{background:#fff;color:var(--navy);border:1px solid var(--navy)}
-.chip{display:inline-block;background:#eef2fb;color:var(--blue);border-radius:99px;padding:2px 10px;margin:2px 4px 2px 0;font-size:14px}
-.job{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;border-top:1px solid var(--line);padding:10px 0}.job>div:first-child{flex:1 1 220px;min-width:0}.job>div:last-child{display:flex;align-items:center;gap:10px;margin-left:auto}.job button{margin:0}
-.job:first-of-type{border-top:0}.job small{color:var(--mut)}.score{font-weight:600;color:var(--blue)}
-.msg{margin-top:8px;font-size:14px}.upl{font-size:14px;color:var(--mut)}input[type=file]{max-width:220px;font-size:13px}.bad{color:var(--bad)}.ok{color:var(--ok)}
-.tag{display:inline-block;border:1px solid var(--mut);color:var(--mut);border-radius:6px;padding:0 8px;font-size:13px}
-.tag.approved{border-color:var(--navy);color:#fff;background:var(--navy)}.tag.rejected{border-color:var(--bad);color:var(--bad)}
-li{margin:4px 0}.q{background:#f5f7fb;border-radius:8px;padding:8px 10px;margin-bottom:8px}
-</style></head><body><main>
-<h1>Slate<span>.</span></h1>
-<p class="sub">Local demo of the Slate flow: a demo approval step for application drafts. Automatic checks are simple rules, not fact checking, so a person must review every draft before it is used. Sign-in required; sample data only.</p>
+h2{font-size:15px;margin:0 0 12px;color:var(--navy);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2 b{flex:none;display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;text-align:center;font-size:12px;line-height:22px;font-weight:600}
+h3{font-size:14px;color:var(--navy)}
+textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);background:#fff;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff;max-width:100%}
+input[type=text],input[type=email],input:not([type]){font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
+label{font-size:13px;font-weight:600;color:var(--navy);display:block;margin:12px 0 4px}
+.draftgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.draftgrid label:first-child{margin-top:0}
+button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;margin:8px 8px 0 0}
+button:hover{background:#1d2f55}
+button.sec{background:#fff;color:var(--navy);border:1px solid var(--line)}
+button.sec:hover{border-color:var(--navy);background:var(--soft)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.toolrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px}
+.toolrow button{margin:0}
+.toolrow select{flex:1 1 220px;min-width:0}
+.note{color:var(--mut);font-size:13px;margin:6px 0 8px}
+.msg{margin-top:8px;font-size:14px}
+.upl{font-size:13px;color:var(--mut)}
+input[type=file]{max-width:230px;font-size:12.5px}
+.bad{color:var(--bad)}
+.ok{color:var(--ok)}
+.dirty{color:var(--bad)}
+.chip{display:inline-block;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:2px 10px;margin:2px 4px 2px 0;font-size:13px}
+.job{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;border-top:1px solid var(--line);padding:12px 0}
+.job>div:first-child{flex:1 1 220px;min-width:0}
+.job>div:last-child{display:flex;align-items:center;gap:10px;margin-left:auto}
+.job button{margin:0}
+.job:first-of-type{border-top:0}
+.job small{color:var(--mut)}
+.score{font-weight:600;color:var(--blue)}
+.tag{display:inline-block;border:1px solid var(--mut);color:var(--mut);border-radius:6px;padding:0 8px;font-size:12px;font-weight:500}
+.tag.approved{border-color:var(--navy);color:#fff;background:var(--navy)}
+.tag.rejected{border-color:var(--bad);color:var(--bad)}
+li{margin:4px 0}
+.q{background:var(--soft);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.warn{background:#fdf6e8;border:1px solid #ecd9ac;border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13.5px;color:var(--warn)}
+.warn li{margin:2px 0}
+.cite{color:var(--mut);font-size:12px}
+pre{white-space:pre-wrap;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13px/1.5 ui-monospace,Menlo,monospace;margin:6px 0}
+pre b{font-weight:600}
+.banner{border:1px solid #cfdbf5;border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;color:var(--ink)}
+code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}
+.pagefoot{margin-top:24px;color:var(--mut);font-size:12.5px}
+@media(max-width:820px){
+.layout{grid-template-columns:1fr}
+.side{position:static;max-height:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px;border-right:0;border-bottom:1px solid var(--line)}
+.sidegroup{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px}
+.sidegroup.onpage,.sidetitle,.sidefoot{display:none}
+.content{padding:18px 14px 56px}
+.draftgrid{grid-template-columns:1fr}
+}
+</style></head>
+<body>
+<div class="layout">
+<aside class="side">
+<a class="brand" href="/">Slate<span>.</span></a>
+<div class="sidegroup">
+<div class="sidetitle">Workspace</div>
+<a class="slink active" href="/">Resume</a>
+<a class="slink" href="/ai">AI draft</a>
+<a class="slink" href="/interview">Mock interview</a>
+</div>
+<div class="sidegroup onpage"><div class="sidetitle">On this page</div><a class="slink sub" href="#s1">1 &middot; Resume</a>
+<a class="slink sub" href="#s2">2 &middot; Compare</a>
+<a class="slink sub" href="#s3">3 &middot; Draft</a>
+<a class="slink sub" href="#s4">4 &middot; Roadmap</a>
+<a class="slink sub" href="#s5">5 &middot; Interview</a></div>
+<div class="sidefoot">Local demo - sample data only, runs on this machine.</div>
+</aside>
+<div class="content">
+<header class="pagehead">
+<h1>Application workspace</h1>
+<p class="sub">A demo approval flow for application drafts. Automatic checks are simple rules, not fact checking, so a person must review every draft before it is used. Sign-in required; sample data only.</p>
+<p class="flowline"><b>Flow:</b> resume &rarr; compare &rarr; draft &rarr; approve &rarr; export, then roadmap and interview practice.</p>
+</header>
 
 <section id="loginbox"><h2>Sign in</h2>
 <div id="loginctl">Checking sign-in mode...</div>
 <div id="loginmsg" class="msg"></div></section>
 
 <section id="s1"><h2><b>1</b>Your resume</h2>
-<div><button id="refreshsaved" class="sec">Load my saved versions</button>
+<div class="toolrow"><button id="refreshsaved" class="sec">Load my saved versions</button>
 <select id="savedversions" aria-label="Saved resume versions"><option value="">Choose a saved version</option></select>
 <button id="opensaved" class="sec">Open selected version</button></div>
 <p class="note">Saved versions belong to this signed-in user. Reopening keeps original source and your review separate; it does not reparse or approve a draft.</p>
 <div id="savedmsg" class="msg"></div>
-<div><button id="refreshdrafts" class="sec">Load my saved drafts</button>
+<div class="toolrow"><button id="refreshdrafts" class="sec">Load my saved drafts</button>
 <select id="saveddrafts" aria-label="Saved drafts"><option value="">Choose a saved draft</option></select>
 <button id="opendraft" class="sec">Open saved draft</button></div>
 <p class="note">Resume your exact saved draft and source version. Reopening does not approve it. Exports are labeled draft text, not a full original CV.</p>
@@ -43,7 +128,7 @@ li{margin:4px 0}.q{background:#f5f7fb;border-radius:8px;padding:8px 10px;margin-
 B.Tech Computer Science, IIITM Gwalior, 2027
 Intern at ExampleCo (3 months)
 Skills: Python, Git, Excel, communication</textarea>
-<div><button id="parse">Parse resume text</button><span class="upl">or upload a PDF: <input type="file" id="pdffile" accept="application/pdf,.pdf"></span></div>
+<div class="toolrow"><button id="parse">Parse resume text</button><span class="upl">or upload a PDF: <input type="file" id="pdffile" accept="application/pdf,.pdf"></span></div>
 <div id="parsed" class="msg"></div>
 <div id="skillreview" hidden>
 <h3>Review your skill statements</h3>
@@ -53,16 +138,17 @@ Skills: Python, Git, Excel, communication</textarea>
 <div><button id="savereview">Save reviewed skills as new version</button></div>
 <div id="reviewmsg" class="msg"></div></div></section>
 
+<!-- TARGET-SELECTION-RESERVED: integration worker adds the real target / pasted job-description controls directly above (or at the top of) section#s2, before the sample comparisons. Keep this area free of decorative content. -->
 <section id="s2" class="off"><h2><b>2</b>Sample job comparisons</h2>
 <p class="note">Demo score = share of a listing's skills found on the resume, over 5 sample listings. The 75% threshold from the deck is not implemented, so nothing here is claimed as a good match.</p>
 <p id="coverage" class="note">Only five analyst/tech fixtures are available. Retail and customer-service roles are not covered. Ranking these fixtures does not choose your career target; the percentages are not resume-quality or employability scores.</p>
 <div id="jobs"></div></section>
 
 <section id="s3" class="off"><h2><b>3</b>Draft <span id="status" class="tag">draft</span></h2>
-<label>Resume text</label><textarea id="dres"></textarea>
-<label>Cover note</label><textarea id="dnote"></textarea>
+<div class="draftgrid"><div><label>Resume text</label><textarea id="dres"></textarea></div>
+<div><label>Cover note</label><textarea id="dnote"></textarea></div></div>
 <div id="dirtynote" class="msg dirty" hidden>Unsaved changes. Save the edit first: approve and export only apply to the saved version.</div>
-<div><button id="edit" class="sec">Save edit (needs new approval)</button><button id="approve">Approve saved draft</button><button id="reject" class="sec">Reject</button><button id="export" class="sec">Export approved draft</button></div>
+<div class="toolrow"><button id="edit" class="sec">Save edit (needs new approval)</button><button id="approve">Approve saved draft</button><button id="reject" class="sec">Reject</button><button id="export" class="sec">Export approved draft</button></div>
 <div id="dmsg" class="msg"></div></section>
 
 <section id="s4" class="off"><h2><b>4</b>Roadmap</h2>
@@ -71,7 +157,9 @@ Skills: Python, Git, Excel, communication</textarea>
 
 <section id="s5" class="off"><h2><b>5</b>Mock interview</h2>
 <button id="start">Start session</button><div id="iv"></div></section>
-</main>
+<div class="pagefoot">Slate demo build.</div>
+</div>
+</div>
 <script>
 const $=id=>document.getElementById(id);
 let rid=null,did=null,sid=null;
