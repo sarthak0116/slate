@@ -43,6 +43,16 @@ positive mention can support the same candidate. Context rules are conservative,
 not general semantic negation detection in every language. This filter applies
 only when parsing a resume; draft claim checks still detect all known mentions.
 
+### Draft save input snapshots
+
+The main review editor records the exact text submitted with a successful save.
+Typing while Save is in flight is preserved but remains unsaved/dirty; approve
+and export stay disabled until that later text is separately saved. This avoids
+showing later unsaved words as if they were the server's saved draft. Existing
+source/account/draft response guards still apply. Synthetic browser checks cover
+unchanged text and either field changing during a delayed save.
+
+
 ### Review/correct skill candidates
 
 The classic page lets a signed-in user edit a short skill list and explicitly

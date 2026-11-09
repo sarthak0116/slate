@@ -157,8 +157,43 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.wait_for_timeout(200)
                 assert not writes, writes
                 page.close()
+            # Saving must bind the clean baseline to the submitted payload,
+            # never text typed while the save response is in flight.
+            for changed in (None, 'dres', 'dnote'):
+                page = browser.new_page()
+                page.goto('http://127.0.0.1:8014/')
+                page.locator('#devmail').fill('save-snapshot@example.com')
+                page.locator('#devgo').click()
+                page.locator('#resume').fill('Alex Example\nSkills: Python, SQL, Excel, communication')
+                page.locator('#parse').click()
+                page.wait_for_function('document.querySelector("#parsed").textContent.includes("Alex Example")')
+                page.locator('[data-j]').first.click()
+                page.wait_for_function('did!==null')
+                submitted_res = page.locator('#dres').input_value()
+                submitted_note = page.locator('#dnote').input_value()+' Saved change.'
+                page.locator('#dnote').fill(submitted_note)
+                held = []
+                page.route('**/v1/drafts/*/edit', lambda route: held.append(route))
+                page.locator('#edit').click()
+                page.wait_for_timeout(50)
+                assert len(held) == 1
+                if changed:
+                    page.locator('#'+changed).fill(page.locator('#'+changed).input_value()+' Later unsaved change.')
+                response = held[0].fetch()
+                held[0].fulfill(response=response)
+                page.wait_for_function('document.querySelector("#dmsg").textContent.includes("Saved as a new draft")')
+                assert page.locator('#approve').is_disabled() == bool(changed)
+                assert page.locator('#edit').is_disabled() == (changed is None)
+                # Server approval/export confirms precisely which payload saved.
+                did = page.evaluate('did')
+                headers = {'Authorization':'Bearer dev:save-snapshot@example.com'}
+                assert page.request.post('http://127.0.0.1:8014/v1/approvals',headers=headers,data={'draftId':did,'decision':'approve'}).status == 200
+                exported = page.request.get('http://127.0.0.1:8014/v1/drafts/'+did+'/export',headers=headers).json()
+                assert exported['tailoredResume'] == submitted_res
+                assert exported['coverNote'] == submitted_note
+                page.close()
             browser.close()
-        print('8 account-switch + 4 same-source draft + 1 PDF source + 3 URL-fragment cases passed; server stopped')
+        print('8 account-switch + 4 same-source draft + 1 PDF source + 3 URL-fragment + 3 in-flight save snapshot cases passed; server stopped')
     finally:
         proc.terminate()
         proc.wait(timeout=10)

@@ -240,8 +240,9 @@ async function tailor(j){const epoch=++draftGeneration;try{
 }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration)return;say("dmsg",e.message,1)}}
 $("edit").onclick=async()=>{const epoch=++draftGeneration,requested=did;try{
   const generation=sourceGeneration;
-  const r=await api("POST","/drafts/"+did+"/edit",{tailoredResume:$("dres").value,coverNote:$("dnote").value});
-  if(epoch!==draftGeneration||requested!==did||generation!==sourceGeneration)return;did=r.draftId;savedRes=$("dres").value;savedNote=$("dnote").value;setStatus("draft");refresh();say("dmsg","Saved as a new draft. It needs its own approval.");
+  const submittedRes=$("dres").value,submittedNote=$("dnote").value;
+  const r=await api("POST","/drafts/"+did+"/edit",{tailoredResume:submittedRes,coverNote:submittedNote});
+  if(epoch!==draftGeneration||requested!==did||generation!==sourceGeneration)return;did=r.draftId;savedRes=submittedRes;savedNote=submittedNote;setStatus("draft");refresh();say("dmsg","Saved as a new draft. It needs its own approval.");
 }catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||requested!==did)return;say("dmsg",e.message,1)}};
 $("approve").onclick=async()=>{const epoch=draftGeneration,requested=did;try{const generation=sourceGeneration;const r=await api("POST","/approvals",{draftId:did,decision:"approve"});if(epoch!==draftGeneration||requested!==did||generation!==sourceGeneration)return;setStatus(r.status);say("dmsg","Saved draft approved in this demo. Review it yourself before using it anywhere.")}catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||requested!==did)return;say("dmsg",e.message,1)}};
 $("reject").onclick=async()=>{const epoch=draftGeneration,requested=did;try{const generation=sourceGeneration;const r=await api("POST","/approvals",{draftId:did,decision:"reject"});if(epoch!==draftGeneration||requested!==did||generation!==sourceGeneration)return;setStatus(r.status);say("dmsg","Rejected. This draft cannot be used.")}catch(e){if(e instanceof StaleResponse||epoch!==draftGeneration||requested!==did)return;say("dmsg",e.message,1)}};
