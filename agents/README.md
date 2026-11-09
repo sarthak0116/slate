@@ -2,6 +2,19 @@
 
 Agent logic lives here: resume, job matching, tailoring, roadmap, mock interview, approval gate. Proposed: Python + LangGraph. One module per agent; prompts, tools, and workflows kept separate. Structure only - no code yet.
 
+### Qualification section boundaries
+
+Known Skills, Projects, References and Interests/Hobbies headings (including
+supported skills-heading translations) do not supply structured degree/work
+history or pass degree claims. This includes explicit inline colon headings.
+A recognized education/employment heading resumes literal history parsing,
+including the headings already supported by the section-review preview.
+Original text remains unchanged. This is conservative section filtering, not
+semantic credential verification: unfamiliar headings, headerless documents,
+role words within actual history and ambiguous degree phrases remain limited.
+Saved parses are not rewritten; explicitly reparse the original source.
+
+
 ### Resume extraction limits
 
 Skill extraction is independent of the five sample job requirements. It combines
@@ -170,15 +183,3 @@ was checked for tracked runtime databases/uploads; none were found. No existing
 state is deleted or rewritten by the ignore change. Keep local state private;
 for an existing shared/tracked database, stop and review an explicit migration or
 access change instead of blindly deleting files or rewriting history.
-
-### Qualification section boundaries
-
-Known Skills, Projects, References and Interests/Hobbies headings (including
-supported skills-heading translations) do not supply structured degree/work
-history or pass degree claims. This includes explicit inline colon headings.
-A recognized education/employment heading resumes literal history parsing,
-including the headings already supported by the section-review preview.
-Original text remains unchanged. This is conservative section filtering, not
-semantic credential verification: unfamiliar headings, headerless documents,
-role words within actual history and ambiguous degree phrases remain limited.
-Saved parses are not rewritten; explicitly reparse the original source.
