@@ -45,6 +45,13 @@ def source_blocks(resume_text: str, job: dict) -> dict:
         blocks["J"] = "{} at {} ({}). Skills wanted: {}.".format(
             job.get("title", ""), job.get("company", ""), job.get("location", ""),
             ", ".join(job.get("skills", [])))
+        # Pasted targets carry the raw job text; include it (bounded) so the
+        # model can align to the actual requirements, not only the extracted
+        # known-vocabulary skill mentions. Sample fixtures have no description
+        # and are unaffected.
+        raw = (job.get("description") or "").strip()
+        if raw:
+            blocks["J"] += " Posting text: " + raw[:4000]
     return blocks
 
 
