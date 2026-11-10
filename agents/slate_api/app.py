@@ -168,6 +168,17 @@ def _mount(r: APIRouter, get_svc):
                                  "AI tailoring is off on this server. Set LLM_API_KEY to enable it.")
             return fn(b.resumeId, b.jobId)
 
+    @r.post("/tailor/ai/target")
+    def tailor_ai_target(request: Request, b: TargetTailorIn):
+        # Opt-in AI drafting against a user-pasted job target. Same guard as
+        # /v1/tailor/ai: off unless the server has a key and the service supports it.
+        with get_svc(request) as svc:  # authenticate first
+            fn = getattr(svc, "tailor_ai_target", None)
+            if fn is None or not os.getenv("LLM_API_KEY"):
+                raise SlateError("ai_not_configured",
+                                 "AI tailoring is off on this server. Set LLM_API_KEY to enable it.")
+            return fn(b.resumeId, b.targetId)
+
     @r.get("/drafts")
     def list_drafts(request: Request):
         with get_svc(request) as svc: return svc.list_drafts()

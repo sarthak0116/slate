@@ -25,7 +25,7 @@ default.
 from . import jobs as J
 from .claims import validate
 from .grounding import build_grounded_prompt, check_grounding, source_blocks
-from .llm import GroqLLM
+from .llm import GeminiLLM, GroqLLM
 from .service import SlateError, SlateService
 from .tailor import check_claims
 
@@ -34,21 +34,49 @@ class AISlateService(SlateService):
     def __init__(self, store=None, llm_client=None):
         super().__init__(store)
         self._llm_client = llm_client  # tests inject MockLLM here
-        # Interview coaching uses Gemini only. LLM_API_KEY may belong to Groq
-        # (used by AI tailoring) and must never be sent to the Gemini endpoint.
+        # Interview coach provider, explicit: SLATE_INTERVIEW_PROVIDER=groq
+        # (default, Slate's chosen provider, 8 Nov 2026) or gemini. A provider's
+        # key is only ever sent to that provider's endpoint - never across.
+        # With the default, a stray historical GEMINI_API_KEY does NOT reroute
+        # interview data to Gemini; Gemini is used only when explicitly selected.
+        # Missing the selected provider's key means the deterministic fallback,
+        # never a silent provider swap.
         import os
-        if llm_client is not None or os.getenv("GEMINI_API_KEY"):
+        pref = (os.getenv("SLATE_INTERVIEW_PROVIDER") or "groq").strip().lower()
+        coach_client = llm_client
+        if coach_client is None and pref == "gemini":
+            if os.getenv("GEMINI_API_KEY"):
+                coach_client = GeminiLLM()
+        elif coach_client is None:
+            if os.getenv("LLM_API_KEY"):
+                coach_client = GroqLLM()
+        if coach_client is not None:
             from .interview import GeminiInterviewCoach
-            self.interviews.coach = GeminiInterviewCoach(llm_client)
+            self.interviews.coach = GeminiInterviewCoach(coach_client)
+
+    def _job_for(self, job_id):
+        """Sample-catalog job, or a pseudo-job built from a pasted target.
+
+        Target pseudo-jobs keep sourceKind=user_pasted so nothing downstream
+        can mistake pasted requirements for verified employer data."""
+        job = J.get_job(job_id)
+        if job is None and job_id in self._targets:
+            t = self.get_target(job_id)
+            job = {"jobId": job_id, "title": t["title"],
+                   "company": t.get("company", ""), "location": "",
+                   "skills": t.get("skills", []),
+                   "description": t.get("rawText", ""),
+                   "sourceKind": t.get("sourceKind", "user_pasted")}
+        return job
 
     def _blocks(self, resume_id, job):
         return source_blocks(self._texts[resume_id], job)
 
     def tailor_ai(self, resume_id, job_id, client=None) -> dict:
         parsed = self._resume(resume_id)
-        job = J.get_job(job_id)
+        job = self._job_for(job_id)
         if job is None:
-            raise SlateError("job_not_found", "No job with that id.")
+            raise SlateError("job_not_found", "No job or pasted target with that id.")
         client = client or self._llm_client or GroqLLM()
         blocks = self._blocks(resume_id, job)
         text = client.generate(build_grounded_prompt(blocks))
@@ -72,10 +100,18 @@ class AISlateService(SlateService):
                 "flaggedClaims": flagged, "violations": violations,
                 "requiresApproval": True}
 
+    def tailor_ai_target(self, resume_id, target_id, client=None) -> dict:
+        """AI draft against a user-pasted job target. Same grounded prompt,
+        citation re-checks and approval gate as tailor_ai; the draft binds to
+        the target id, exactly like the deterministic tailor_target path."""
+        if target_id not in self._targets:
+            raise SlateError("target_not_found", "No pasted target with that id.")
+        return self.tailor_ai(resume_id, target_id, client=client)
+
     def get_draft(self, draft_id):
         result = super().get_draft(draft_id)
         if result["content"].get("aiGenerated"):
-            blocks = self._blocks(result["resumeId"], J.get_job(result["jobId"]))
+            blocks = self._blocks(result["resumeId"], self._job_for(result["jobId"]))
             result["violations"] += check_grounding(result["content"].get("tailoredResume", ""), blocks, allow_job=False)
             result["violations"] += check_grounding(result["content"].get("coverNote", ""), blocks)
         return result
@@ -88,7 +124,7 @@ class AISlateService(SlateService):
         d = super()._check_draft(draft_id)
         if not d["content"].get("aiGenerated"):
             return d
-        job = J.get_job(d.get("jobId"))
+        job = self._job_for(d.get("jobId"))
         blocks = self._blocks(d["resumeId"], job)
         bad = check_grounding(d["content"].get("tailoredResume", ""), blocks, allow_job=False)
         bad += check_grounding(d["content"].get("coverNote", ""), blocks)

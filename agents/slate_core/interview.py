@@ -115,13 +115,23 @@ def _fallback_next_question(session):
 
 
 class GeminiInterviewCoach:
-    """Uses the existing LLMClient interface; the API key stays server-side."""
+    """Uses the existing LLMClient interface; the API key stays server-side.
 
-    def __init__(self, client=None):
+    `provider` names the backing provider for honest UI/session labels
+    ("gemini", "groq", ...). It is inferred from the client class when not
+    given; the coach itself is provider-agnostic.
+    """
+
+    def __init__(self, client=None, provider=None):
         if client is None:
             from .llm import GeminiLLM
             client = GeminiLLM()
+        if provider is None:
+            from .llm import GeminiLLM, GroqLLM
+            provider = ("gemini" if isinstance(client, GeminiLLM)
+                        else "groq" if isinstance(client, GroqLLM) else "llm")
         self.client = client
+        self.provider = provider
 
     def first_question(self, role, resume_context, past_feedback):
         prompt = (
@@ -333,7 +343,7 @@ class InterviewStore:
         first = qs[0]
         ai_powered = False
         coach_error = (None if self.coach is not None else
-                       "Gemini is not configured for interview coaching. Set GEMINI_API_KEY in the repository-root .env and restart the server.")
+                       "AI interview coaching is not configured on this server. Set GEMINI_API_KEY (Gemini) or LLM_API_KEY (Groq) in the repository-root .env and restart the server.")
         if self.coach is not None:
             try:
                 first = self.coach.first_question(target_role, resume_context, carried)
@@ -349,12 +359,13 @@ class InterviewStore:
             "carried": carried, "resume_context": resume_context or {},
             "ai_powered": ai_powered, "model_turns": 1 if ai_powered else 0,
             "fallback_turns": 0, "coach_error": coach_error,
+            "provider": getattr(self.coach, "provider", "gemini") if ai_powered else None,
             "done": False, "ended": False,
         }
         return {"sessionId": sid, "firstQuestion": first,
                 "carriedFromEarlier": carried, "mode": mode,
                 "aiPowered": ai_powered,
-                "coachMode": "gemini" if ai_powered else "deterministic_fallback",
+                "coachMode": (self._sessions[sid]["provider"] or "gemini") if ai_powered else "deterministic_fallback",
                 "coachError": coach_error}
 
     def _upgrade_legacy_session(self, session):
@@ -383,7 +394,7 @@ class InterviewStore:
             "followup_used": False, "transcript": transcript, "reviews": reviews,
             "resume_context": {}, "mode": "text", "ai_powered": False,
             "model_turns": 0, "fallback_turns": len(answers),
-            "coach_error": "This saved interview predates Gemini diagnostics; its original provider error is unavailable.",
+            "coach_error": "This saved interview predates AI-coach diagnostics; its original provider error is unavailable.",
             "done": len(answers) >= len(questions),
         })
 
@@ -527,7 +538,8 @@ class InterviewStore:
                            if isinstance(r.get("deliveryScore"), (int, float))]
         average_delivery = (round(sum(delivery_scores) / len(delivery_scores), 1)
                             if delivery_scores else None)
-        mode = ("gemini" if s["ai_powered"] and not s["fallback_turns"] else
+        provider = s.get("provider") or "gemini"
+        mode = (provider if s["ai_powered"] and not s["fallback_turns"] else
                 "mixed" if s["ai_powered"] else "deterministic_fallback")
         fb = {
             "summary": f"{len(s['answers'])} answer(s) recorded; average answer score {average}/5.",

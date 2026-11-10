@@ -344,7 +344,7 @@ $("start").onclick=async()=>{
   sessionMode=$("mode").value;
   const data=await api("/interview/mock","POST",{targetRole:$("role").value.trim(),mode:sessionMode,resumeId:$("resume").value||null});
   sid=data.sessionId;sessionEnded=false;$("setup").classList.add("hidden");$("session").classList.remove("hidden");$("results").classList.add("hidden");
-  $("question").textContent=data.firstQuestion;$("coachMode").textContent=data.coachMode==="gemini"?"Gemini adaptive coach":"Fallback coach";
+  $("question").textContent=data.firstQuestion;$("coachMode").textContent={gemini:"Gemini adaptive coach",groq:"Groq adaptive coach",llm:"AI adaptive coach"}[data.coachMode]||"Fallback coach";
   $("progress").textContent="Question 1";$("answer").value="";msg("sessionStatus",data.coachError?"Gemini unavailable: "+data.coachError:(data.carriedFromEarlier.length?"Prior weak areas included: "+data.carriedFromEarlier.join(", "):"Interview started."),!!data.coachError);
   if(sessionMode==="voice"){await prepareAudio();if(c.epoch===contextEpoch&&c.auth===token())speak(data.firstQuestion,beginAnswerCapture)}
  }catch(e){if(e instanceof StaleResponse)return;msg("setupStatus",e.message,true)}finally{if(c.epoch===contextEpoch&&c.auth===token()){busy=false;$("start").disabled=false}}
@@ -464,7 +464,7 @@ $("submit").onclick=async()=>{
 async function finish(){
  stopDevices();
  const fb=await api("/interview/"+sid+"/feedback");$("session").classList.add("hidden");$("results").classList.remove("hidden");
- $("summary").innerHTML='<p><b>'+esc(fb.summary)+'</b></p><p>Content score: <b>'+esc(fb.averageScore)+'/5</b>'+(fb.averageDeliveryScore!==null&&fb.averageDeliveryScore!==undefined?' · Voice delivery: <b>'+esc(fb.averageDeliveryScore)+'/5</b>':'')+' · Coach: '+esc(fb.coachMode)+'</p>'+(fb.coachError?'<p class="status error"><b>Gemini unavailable:</b> '+esc(fb.coachError)+'</p>':"");
+ $("summary").innerHTML='<p><b>'+esc(fb.summary)+'</b></p><p>Content score: <b>'+esc(fb.averageScore)+'/5</b>'+(fb.averageDeliveryScore!==null&&fb.averageDeliveryScore!==undefined?' · Voice delivery: <b>'+esc(fb.averageDeliveryScore)+'/5</b>':'')+' · Coach: '+esc(fb.coachMode)+'</p>'+(fb.coachError?'<p class="status error"><b>AI coach unavailable:</b> '+esc(fb.coachError)+'</p>':"");
  const reviews=fb.answerReviews||[];$("details").innerHTML=reviews.map((r,i)=>'<div class="review"><b>'+esc(r.isFollowUp?"Follow-up":"Answer "+(i+1))+' · '+esc(r.score)+'/5</b><p>'+esc(r.question)+'</p><blockquote><b>Your answer (verbatim):</b><p>“'+esc(r.answer||"Answer text was not retained for this older session.")+'”</p></blockquote><p>'+esc(r.feedback)+'</p>'+(r.strengths.length?'<p><b>Strengths:</b> '+esc(r.strengths.join("; "))+'</p>':"")+(r.improvements.length?'<p><b>Improve:</b> '+esc(r.improvements.join("; "))+'</p>':"")+(r.deliveryScore?'<p><b>Voice delivery: '+esc(r.deliveryScore)+'/5</b> · '+esc(r.deliveryFeedback)+'</p>':"")+(r.deliveryImprovements?.length?'<p><b>Delivery suggestions:</b> '+esc(r.deliveryImprovements.join("; "))+'</p>':"")+'</div>').join("")+(fb.weakAreas.length?'<h3>Weak areas to revisit</h3><ul>'+fb.weakAreas.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"")+(fb.strengths.length?'<h3>Strengths</h3><ul>'+fb.strengths.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"")+(fb.improvements.length?'<h3>Recommended improvements</h3><ul>'+fb.improvements.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":"");
 }
 $("endInterview").onclick=async()=>{

@@ -43,12 +43,15 @@ uploaded, recorded or used for automated face/emotion analysis. Camera permissio
 is independent from microphone permission; the interview can continue without
 either device.
 
-The interview coach uses the existing `GeminiLLM` adapter. Set
-`GEMINI_API_KEY` in the repository-root `.env` file (copy
-`.env.example`); `GEMINI_MODEL` defaults to `gemini-3.8-flash`.
-The API key stays on the server. Without a working Gemini key or when a model
-call fails, the interview continues with deterministic fallback evaluation.
-Feedback labels whether the session used Gemini, fallback, or a mixture.
+The interview coach provider is explicit: `SLATE_INTERVIEW_PROVIDER` in the
+repository-root `.env` (copy `.env.example`) is `groq` by default - Slate's
+chosen provider - using `LLM_API_KEY` through the Groq adapter, or `gemini`
+using `GEMINI_API_KEY` (`GEMINI_MODEL` defaults to `gemini-3.8-flash`). Keys
+stay on the server and each key only ever reaches its own provider's endpoint;
+a leftover Gemini key never reroutes data under the default. Without a working
+key or when a model call fails, the interview continues with deterministic
+fallback evaluation. Feedback labels whether the session used Gemini, Groq,
+fallback, or a mixture.
 
 For a local-only sign-in, `SLATE_DEV_AUTH=1` is also in the example env file.
 This must never be enabled on a public deployment. The optional

@@ -260,14 +260,54 @@ def test_gemini_does_not_reuse_the_generic_groq_llm_api_key(monkeypatch):
     assert GeminiLLM().api_key == ""
 
 
-def test_groq_only_configuration_does_not_enable_gemini_interview_coach(monkeypatch):
+def test_groq_only_configuration_enables_coach_through_groq_not_gemini(monkeypatch):
+    # Slate's chosen provider is Groq. A Groq-only server still gets an AI
+    # interview coach, routed to the Groq adapter; the key is never handed to
+    # GeminiLLM (covered by test_gemini_does_not_reuse_the_generic_groq_llm_api_key).
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("LLM_API_KEY", "groq-key-not-a-gemini-key")
+    service = AISlateService()
+    coach = service.interviews.coach
+    assert isinstance(coach, GeminiInterviewCoach)
+    assert coach.provider == "groq"
+    from slate_core.llm import GroqLLM
+    assert isinstance(coach.client, GroqLLM)
+
+
+def test_groq_is_the_default_even_when_a_gemini_key_is_also_present(monkeypatch):
+    # Slate's chosen provider is Groq; a stray historical Gemini key must not
+    # silently reroute interview data to Gemini.
+    monkeypatch.delenv("SLATE_INTERVIEW_PROVIDER", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("LLM_API_KEY", "groq-key")
+    service = AISlateService()
+    from slate_core.llm import GroqLLM
+    assert isinstance(service.interviews.coach.client, GroqLLM)
+    assert service.interviews.coach.provider == "groq"
+
+
+def test_gemini_used_only_when_explicitly_selected(monkeypatch):
+    monkeypatch.setenv("SLATE_INTERVIEW_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("LLM_API_KEY", "groq-key")
+    service = AISlateService()
+    from slate_core.llm import GeminiLLM
+    assert isinstance(service.interviews.coach.client, GeminiLLM)
+    assert service.interviews.coach.provider == "gemini"
+
+
+def test_selected_provider_without_key_falls_back_not_swaps(monkeypatch):
+    # gemini explicitly selected but only a Groq key exists: no silent swap,
+    # the deterministic fallback coach serves instead.
+    monkeypatch.setenv("SLATE_INTERVIEW_PROVIDER", "gemini")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_API_KEY", "groq-key")
     service = AISlateService()
     assert service.interviews.coach is None
 
 
 def test_gemini_key_enables_interview_coach(monkeypatch):
+    monkeypatch.setenv("SLATE_INTERVIEW_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
     service = AISlateService()
     assert isinstance(service.interviews.coach, GeminiInterviewCoach)
