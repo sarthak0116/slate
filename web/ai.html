@@ -253,7 +253,7 @@ html[data-theme=dark] #loginbox,html[data-theme=dark] #authPanel{background:rgba
 <div class="content">
 <header class="pagehead">
 <h1>AI draft <span class="hsub">(opt-in demo)</span></h1>
-<p class="sub">This page calls the real LLM through <code>POST /v1/tailor/ai</code>. It only works when the server was started with a key. Sample data only.</p>
+<p class="sub">This page calls the real LLM through <code>POST /v1/tailor/ai</code> (samples) or <code>/v1/tailor/ai/target</code> (pasted targets). It only works when the server was started with a key. Job choices are your pasted targets plus five sample fixtures.</p>
 </header>
 
 <details class="fold safeguard"><summary><span><b>Human review is required.</b> <span class="sumsub">Mechanical checks, not fact checking</span></span></summary><div class="foldbody">The LLM only sees numbered blocks from the uploaded resume and the job, and every draft line must cite its sources like <span class="cite">[S2]</span>. The server re-checks this mechanically at approval and export: uncited lines, unknown citations, invented numbers or names, and lines whose wording leaves the cited sources all block approval. It is still not a fact check - a cited line can still twist a source's meaning, and qualifier inflation ("advanced Excel") can slip through. Review by eye.</div></details>
@@ -279,7 +279,7 @@ Skills: Python, Git, Excel, communication</textarea>
 <div><button id="parse">Parse resume</button></div>
 <div id="parsed" class="msg"></div></section>
 
-<section id="s2" class="off"><h2><b>2</b>Pick a sample job</h2>
+<section id="s2" class="off"><h2><b>2</b>Pick a pasted target or sample job</h2>
 <select id="job"></select>
 <div><button id="gen">Generate AI draft</button></div>
 <div id="genmsg" class="msg"></div></section>
@@ -408,10 +408,14 @@ document.getElementById("parse").onclick=async()=>{
     sourceGeneration++;draftGeneration++;draftId=null;resumeId=r.resumeId;
     document.getElementById("s3").classList.add("off");
     ["dres","dnote","flags","decision","genmsg"].forEach(id=>document.getElementById(id).textContent="");
-    msg.textContent="Detected skill phrases: "+(r.parsed.skills.join(", ")||"none found; this does not mean you have no skills")+". "+(r.parsed.parseWarnings||[]).join(" ")+" Not counted without review: "+(r.parsed.uncertainSkills||[]).map(e=>e.skill).join(", ")+". Job choices below are five analyst/tech fixtures, not inferred career targets; retail/customer-service roles are not covered.";
+    msg.textContent="Detected skill phrases: "+(r.parsed.skills.join(", ")||"none found; this does not mean you have no skills")+". "+(r.parsed.parseWarnings||[]).join(" ")+" Not counted without review: "+(r.parsed.uncertainSkills||[]).map(e=>e.skill).join(", ")+". Job choices below list your pasted targets first, then five analyst/tech fixtures (not inferred career targets; retail/customer-service roles are not covered in the fixtures).";
     const j=await api("/jobs","GET");
+    let pasted={targets:[]};
+    try{pasted=await api("/targets","GET")}catch(e){if(e instanceof StaleResponse)throw e;}
     const sel=document.getElementById("job");
-    sel.replaceChildren(...j.jobs.map(x=>new Option(x.title+" at "+x.company,x.jobId)));
+    sel.replaceChildren(
+      ...pasted.targets.map(x=>new Option("Pasted target: "+x.title+(x.company?" at "+x.company:""),"target:"+x.targetId)),
+      ...j.jobs.map(x=>new Option("Sample: "+x.title+" at "+x.company,x.jobId)));
     document.getElementById("s2").classList.remove("off");
   }catch(e){if(e instanceof StaleResponse)return;msg.innerHTML='<span class="bad">'+escapeHTML(e.message)+"</span>"}
 };
@@ -419,7 +423,10 @@ document.getElementById("gen").onclick=async()=>{
   const epoch=++draftGeneration;
   const msg=document.getElementById("genmsg");
   try{
-    const d=await api("/tailor/ai","POST",{resumeId,jobId:document.getElementById("job").value});
+    const choice=document.getElementById("job").value;
+    const d=choice.startsWith("target:")
+      ?await api("/tailor/ai/target","POST",{resumeId,targetId:choice.slice(7)})
+      :await api("/tailor/ai","POST",{resumeId,jobId:choice});
     if(epoch!==draftGeneration)return;draftId=d.draftId;
     document.getElementById("status").textContent="draft";
     document.getElementById("status").className="tag draft";
